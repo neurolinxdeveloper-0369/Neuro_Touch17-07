@@ -13,12 +13,14 @@ class AuthHeader extends StatelessWidget {
   final String subtitle;
 
   final bool? isForceDark;
+  final bool showBrandAccent;
 
   const AuthHeader({
     super.key,
     required this.title,
     required this.subtitle,
     this.isForceDark,
+    this.showBrandAccent = true,
   });
 
   @override
@@ -32,33 +34,35 @@ class AuthHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Neuro Touch brand accent
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 28,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [_primary, _secondary],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+        if (showBrandAccent) ...[
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 28,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [_primary, _secondary],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                borderRadius: BorderRadius.circular(2),
               ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Neuro Touch',
-              style: GoogleFonts.inter(
-                color: _primary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
+              const SizedBox(width: 10),
+              Text(
+                'Neuro Touch',
+                style: GoogleFonts.inter(
+                  color: _primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
               ),
-            ),
-          ],
-        ),
-        SizedBox(height: screenWidth * 0.04),
+            ],
+          ),
+          SizedBox(height: screenWidth * 0.04),
+        ],
         Text(
           title,
           style: GoogleFonts.inter(

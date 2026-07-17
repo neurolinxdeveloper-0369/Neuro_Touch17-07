@@ -105,24 +105,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Top Illustration Image
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.asset(
-                        'assets/images/login_illustration.jpg',
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
+                    // Centered Logo and Brand Name
+                    Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            'assets/images/logo_3547.png',
+                            height: 80,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Neuro Touch',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
                     const SizedBox(height: 24),
 
-                    // Header (Forced white text)
+                    // Header (Forced white text, brand accent hidden)
                     const AuthHeader(
-                      title: 'Welcome to Neuro Touch',
+                      title: 'Welcome',
                       subtitle: 'Sign in or sign up using your phone number or social accounts',
                       isForceDark: true,
+                      showBrandAccent: false,
                     ),
 
                     const SizedBox(height: 24),
