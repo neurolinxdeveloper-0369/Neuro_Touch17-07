@@ -203,7 +203,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         Expanded(
                           child: SocialButton(
                             label: 'Google',
-                            assetPath: 'assets/images/google_logo.png',
+                            assetPath: 'assets/images/Google__G__logo.svg.webp',
                             onTap: _googleSignIn,
                             isDark: true,
                           ),
