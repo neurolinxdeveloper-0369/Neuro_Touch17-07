@@ -144,7 +144,11 @@ class AuthController extends StateNotifier<AuthState> {
   // --- Logout ---
 
   Future<void> logout() async {
-    await _repo.logout();
+    try {
+      await _repo.logout();
+    } catch (e) {
+      print('Local logout error: $e');
+    }
     try {
       await _googleSignIn.signOut();
     } catch (_) {}
