@@ -40,7 +40,7 @@ func compactOldTelemetry() {
 	var hourlyAggs []TempAgg
 	queryHourly := `SELECT device_id, metric, date_trunc('hour', recorded_at) as hour_stamp,
 	                       avg(value) as avg_value, min(value) as min_value, max(value) as max_value
-	                FROM telemetry
+	                FROM telemetries
 	                WHERE recorded_at < ?
 	                GROUP BY device_id, metric, hour_stamp`
 
