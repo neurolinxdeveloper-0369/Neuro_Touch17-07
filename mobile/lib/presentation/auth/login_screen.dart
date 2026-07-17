@@ -212,7 +212,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         Expanded(
                           child: SocialButton(
                             label: 'Apple',
-                            icon: CupertinoIcons.apple,
+                            icon: Icons.apple,
                             onTap: () {
                               context.showInfoSnackBar('Sign in with Apple is not configured for this device yet.');
                             },
