@@ -70,6 +70,149 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     await ref.read(authControllerProvider.notifier).signInWithGoogle();
   }
 
+  void _showTermsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF06457F),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Terms & Conditions',
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: MediaQuery.sizeOf(context).height * 0.5,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Last Updated: July 17, 2026\n',
+                    style: GoogleFonts.inter(
+                      color: Colors.white38,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    'Welcome to Neuro Touch. Please read these Terms & Conditions ("Terms") carefully before using our mobile application and IoT services.\n\n'
+                    '1. Acceptance of Terms\n'
+                    'By accessing or using the Neuro Touch mobile application, you agree to be bound by these Terms and our Privacy Policy. If you do not agree, please do not use the application.\n\n'
+                    '2. Description of Service\n'
+                    'Neuro Touch provides a secure IoT (Internet of Things) dashboard allowing users to provision, manage, monitor, and automate smart home devices. Services include real-time device control, automated task scheduling, and intelligent automation chat support.\n\n'
+                    '3. Account Registration & Security\n'
+                    'To use the application, you must authenticate using your phone number or valid social credentials. You are responsible for keeping your login credentials confidential and for all activities that occur under your account.\n\n'
+                    '4. Device Provisioning & Network Security\n'
+                    'Provisioning smart home devices (via SoftAP or local network setups) requires configuring connection parameters. You are solely responsible for securing your local wireless network (Wi-Fi) and ensuring that your IoT devices are deployed in a safe manner.\n\n'
+                    '5. Prohibited Activities\n'
+                    'You agree not to attempt to reverse engineer, decompile, or bypass security features of the app or connected hardware, use the service for any illegal purposes, or impersonate another user.\n\n'
+                    '6. Limitation of Liability\n'
+                    'Neuro Touch, its developers, and affiliates shall not be liable for any direct, indirect, incidental, or consequential damages resulting from hardware failures, network outages, unauthorized access, or inaccuracies in automated actions.\n\n'
+                    '7. Modifications to Service and Terms\n'
+                    'We reserve the right to modify or discontinue the service, or amend these Terms at any time. Continued use of the application constitutes acceptance of updated Terms.',
+                    style: GoogleFonts.inter(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+              child: Text(
+                'Close',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showPrivacyDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF06457F),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Privacy Policy',
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: MediaQuery.sizeOf(context).height * 0.5,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Last Updated: July 17, 2026\n',
+                    style: GoogleFonts.inter(
+                      color: Colors.white38,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    'At Neuro Touch, we value your privacy. This Privacy Policy describes how we collect, use, store, and share your personal information.\n\n'
+                    '1. Information We Collect\n'
+                    'We collect the following data to provide and improve our services:\n'
+                    '• Authentication Data: Phone numbers, OTP codes, or Social Sign-in profiles (name and profile picture URL).\n'
+                    '• Device Details: Wi-Fi networks (SSID/BSSID) during provisioning, and status diagnostics of connected IoT smart devices.\n'
+                    '• Local Storage: Secure tokens, local preferences, and offline cache are saved locally using secure storage.\n\n'
+                    '2. How We Use Information\n'
+                    'We use the collected information for user authentication, provisioning and controlling local and remote IoT hardware, providing AI assistant automation, and improving app performance.\n\n'
+                    '3. Data Storage & Security\n'
+                    'Your data is securely stored locally on your device and transmitted to our cloud servers using SSL/TLS encryption. We implement administrative and technical measures to protect your data from unauthorized access.\n\n'
+                    '4. Data Sharing\n'
+                    'We do not sell, rent, or trade your personal information. We may share data only to comply with legal obligations or protect user safety.\n\n'
+                    '5. Your Rights & Choices\n'
+                    'You have control over your data. You can update your profile name/avatar via Settings, request complete account deletion, or clear your local cache at any time.',
+                    style: GoogleFonts.inter(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+              child: Text(
+                'Close',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.sizeOf(context);
@@ -254,7 +397,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             GestureDetector(
-                              onTap: () => context.showInfoSnackBar('Terms and Conditions'),
+                              onTap: () => _showTermsDialog(context),
                               child: const Text(
                                 'Terms & Conditions',
                                 style: TextStyle(
@@ -268,7 +411,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             ),
                             const Text('  |  ', style: TextStyle(color: Colors.white30, fontSize: 12)),
                             GestureDetector(
-                              onTap: () => context.showInfoSnackBar('Privacy Policy'),
+                              onTap: () => _showPrivacyDialog(context),
                               child: const Text(
                                 'Privacy Policy',
                                 style: TextStyle(
