@@ -1,0 +1,33 @@
+{
+  "rules": [
+    {
+      "id": "telemetry_persistence",
+      "sql": "SELECT clientid as device_id, topic, payload FROM \"neurotouch/devices/+/telemetry/#\"",
+      "actions": [
+        {
+          "type": "republish",
+          "params": {
+            "topic": "neurotouch/archive/telemetry",
+            "qos": 0
+          }
+        }
+      ],
+      "description": "Rule to archive raw telemetry topic streams"
+    },
+    {
+      "id": "device_offline_detection",
+      "sql": "SELECT clientid as device_id, event, payload FROM \"$events/client_disconnected\"",
+      "actions": [
+        {
+          "type": "republish",
+          "params": {
+            "topic": "neurotouch/devices/${clientid}/status",
+            "payload_tmpl": "{\"status\":\"offline\"}",
+            "qos": 1
+          }
+        }
+      ],
+      "description": "Rule to intercept clean disconnection events and mark device status as offline"
+    }
+  ]
+}

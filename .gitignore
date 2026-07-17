@@ -1,0 +1,23 @@
+# Environment variables
+.env
+backend/.env
+
+# IDEs and editors
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Build and cache
+build/
+.gradle/
+.dart_tool/
+node_modules/
+dist/
+*.log
+*.lock

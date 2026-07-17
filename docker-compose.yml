@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  # --- PostgreSQL Database ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: neurotouch_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-neurotouch}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-neurotouch}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - neurotouch_net
+
+  # --- EMQX MQTT Broker ---
+  emqx:
+    image: emqx/emqx:5.6.1
+    container_name: neurotouch_mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"      # MQTT Port
+      - "8083:8083"      # MQTT over WebSocket Port
+      - "18083:18083"    # Web Dashboard Port
+    environment:
+      EMQX_ALLOW_ANONYMOUS: "true"
+      EMQX_LISTENER__TCP__EXTERNAL__ACCEPTORS: "8"
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - neurotouch_net
+
+  # --- Ollama AI Service ---
+  ollama:
+    image: ollama/ollama:latest
+    container_name: neurotouch_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # Note: If running on VPS with GPU, uncomment below to leverage NVIDIA runtime
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    networks:
+      - neurotouch_net
+
+  # --- Go REST API Server ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: neurotouch_backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-neurotouch}
+      DB_SSLMODE: disable
+      MQTT_BROKER: emqx
+      MQTT_PORT: 1883
+      MQTT_USERNAME: ""
+      MQTT_PASSWORD: ""
+      JWT_SECRET: ${JWT_SECRET:-super_secret_neuro_touch_key}
+      OLLAMA_API_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
+    networks:
+      - neurotouch_net
+
+volumes:
+  postgres_data:
+    driver: local
+  emqx_data:
+    driver: local
+  emqx_log:
+    driver: local
+  ollama_data:
+    driver: local
+
+networks:
+  neurotouch_net:
+    driver: bridge

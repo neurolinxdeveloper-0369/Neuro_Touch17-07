@@ -1,0 +1,26 @@
+{
+  "ac": [
+    { "brand": "Daikin", "codes": ["DAIKIN_ON", "DAIKIN_OFF", "TEMP_18", "TEMP_22", "TEMP_24", "MODE_COOL"] },
+    { "brand": "Samsung", "codes": ["SAMSUNG_AC_ON", "SAMSUNG_AC_OFF", "AC_TEMP_18", "AC_TEMP_22", "AC_TEMP_24"] },
+    { "brand": "LG", "codes": ["LG_AC_ON", "LG_AC_OFF", "AC_TEMP_18", "AC_TEMP_22", "AC_TEMP_24"] },
+    { "brand": "Mitsubishi", "codes": ["MITSUBISHI_ON", "MITSUBISHI_OFF", "TEMP_20", "TEMP_24"] },
+    { "brand": "Panasonic", "codes": ["PANASONIC_ON", "PANASONIC_OFF", "TEMP_18", "TEMP_22", "TEMP_24"] },
+    { "brand": "Voltas", "codes": ["VOLTAS_ON", "VOLTAS_OFF", "TEMP_20", "TEMP_24"] },
+    { "brand": "Carrier", "codes": ["CARRIER_ON", "CARRIER_OFF", "TEMP_18", "TEMP_22", "TEMP_24"] }
+  ],
+  "tv": [
+    { "brand": "Sony", "codes": ["SONY_POWER", "SONY_MUTE", "SONY_VOL_UP", "SONY_VOL_DOWN", "SONY_CH_UP", "SONY_CH_DOWN", "SONY_INPUT"] },
+    { "brand": "Samsung", "codes": ["SAMSUNG_POWER", "SAMSUNG_MUTE", "SAMSUNG_VOL_UP", "SAMSUNG_VOL_DOWN", "SAMSUNG_CH_UP", "SAMSUNG_CH_DOWN", "SAMSUNG_INPUT"] },
+    { "brand": "LG", "codes": ["LG_POWER", "LG_MUTE", "LG_VOL_UP", "LG_VOL_DOWN", "LG_CH_UP", "LG_CH_DOWN", "LG_INPUT"] },
+    { "brand": "TCL", "codes": ["TCL_POWER", "TCL_MUTE", "TCL_VOL_UP", "TCL_VOL_DOWN"] },
+    { "brand": "Xiaomi", "codes": ["XIAOMI_POWER", "XIAOMI_MUTE", "XIAOMI_VOL_UP", "XIAOMI_VOL_DOWN"] },
+    { "brand": "Panasonic", "codes": ["PANASONIC_POWER", "PANASONIC_MUTE", "PANASONIC_VOL_UP", "PANASONIC_VOL_DOWN"] }
+  ],
+  "fan": [
+    { "brand": "Usha", "codes": ["USHA_POWER", "SPEED_1", "SPEED_2", "SPEED_3", "SPEED_4", "SPEED_5"] },
+    { "brand": "Havells", "codes": ["HAVELLS_POWER", "SPEED_1", "SPEED_2", "SPEED_3", "SPEED_4", "SPEED_5"] },
+    { "brand": "Orient", "codes": ["ORIENT_POWER", "SPEED_1", "SPEED_2", "SPEED_3", "SPEED_4", "SPEED_5"] },
+    { "brand": "Crompton", "codes": ["CROMPTON_POWER", "SPEED_1", "SPEED_2", "SPEED_3", "SPEED_4", "SPEED_5"] },
+    { "brand": "Luminous", "codes": ["LUMINOUS_POWER", "SPEED_1", "SPEED_2", "SPEED_3", "SPEED_4"] }
+  ]
+}
