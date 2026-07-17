@@ -6,16 +6,16 @@ import '../../controllers/mqtt.controller.dart';
 import '../../data/models/device.model.dart';
 import '../../core/utils/extensions.dart';
 
-const Color _primary = Color(0xFF4C6FFF);
-const Color _darkBg = Color(0xFF010817);
-const Color _cardDark = Color(0xFF45484D);
-const Color _success = Color(0xFF00B894);
+const Color _primary = Color(0xFF06457F);
+const Color _darkBg = Color(0xFF33343B);
+const Color _cardDark = Color(0xFF06457F);
+const Color _success = Color(0xFFFFFFFF);
 const Color _darkTextPrimary = Color(0xFFFFFFFF);
-const Color _darkTextSecondary = Color(0xFFB2BEC3);
-const Color _lightTextPrimary = Color(0xFF0F172A);
-const Color _lightTextSecondary = Color(0xFF555E68);
-const Color _borderDark = Color(0xFF55595E);
-const Color _borderLight = Color(0xFFD1D5DB);
+const Color _darkTextSecondary = Color(0xFFFFFFFF);
+const Color _lightTextPrimary = Color(0xFF06457F);
+const Color _lightTextSecondary = Color(0xFF06457F);
+const Color _borderDark = Color(0xFF06457F);
+const Color _borderLight = Color(0xFF06457F);
 
 class DeviceDetailScreen extends ConsumerWidget {
   final String deviceId;

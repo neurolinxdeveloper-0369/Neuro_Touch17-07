@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-const Color _primary = Color(0xFF4C6FFF);
-const Color _secondary = Color(0xFF6C5CE7);
+const Color _primary = Color(0xFF06457F);
+const Color _secondary = Color(0xFF06457F);
 const Color _darkTextPrimary = Color(0xFFFFFFFF);
-const Color _darkTextSecondary = Color(0xFFB2BEC3);
-const Color _lightTextPrimary = Color(0xFF0F172A);
-const Color _lightTextSecondary = Color(0xFF555E68);
+const Color _darkTextSecondary = Color(0xFFFFFFFF);
+const Color _lightTextPrimary = Color(0xFF06457F);
+const Color _lightTextSecondary = Color(0xFF06457F);
 
 class AuthHeader extends StatelessWidget {
   final String title;

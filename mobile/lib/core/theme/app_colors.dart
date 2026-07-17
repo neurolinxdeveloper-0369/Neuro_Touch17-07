@@ -3,58 +3,63 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Core backgrounds
-  static const Color darkBg = Color(0xFF010817);
-  static const Color lightBg = Color(0xFFF2F3F5);
-  static const Color surface = Color(0xFFE2E4E8); // Light grey/blue surface
+  // Core background colors (1st color of each theme)
+  static const Color darkBg = Color(0xFF33343B);
+  static const Color lightBg = Color(0xFFEAFBFF);
+  
+  // Cards background for both themes (2nd color)
+  static const Color primaryCard = Color(0xFF06457F);
+  
+  // Foreground / Text / Icons / Primary branding (3rd color)
+  static const Color darkText = Color(0xFFFFFFFF);
+  static const Color lightTextOnBg = Color(0xFF06457F);
+  static const Color lightTextOnCard = Color(0xFFFFFFFF);
+
+  // Helper mappings:
+  static const Color darkBgColor = darkBg;
+  static const Color lightBgColor = lightBg;
+  
+  static const Color cardDark = primaryCard;
+  static const Color cardLight = primaryCard;
+  
+  // Borders
+  static const Color borderDark = Color(0xFF06457F);
+  static const Color borderLight = Color(0xFF06457F);
+
+  // Text
+  static const Color darkTextPrimary = darkText;
+  static const Color darkTextSecondary = darkText;
+  
+  static const Color lightTextPrimary = lightTextOnBg;
+  static const Color lightTextSecondary = lightTextOnBg;
 
   // Brand colors
-  static const Color primary = Color(0xFF4C6FFF);
-  static const Color secondary = Color(0xFF6C5CE7);
-  static const Color primaryLight = Color(0xFF7B97FF);
+  static const Color primary = Color(0xFF06457F);
+  static const Color secondary = Color(0xFF06457F);
+  static const Color surface = Color(0xFF06457F);
+  
+  static const Color success = Color(0xFF06457F);
+  static const Color warning = Color(0xFF06457F);
+  static const Color error = Color(0xFF06457F);
+  static const Color info = Color(0xFF06457F);
+  
+  static const Color online = Color(0xFFFFFFFF);
+  static const Color offline = Color(0xFF33343B);
 
-  // Semantic colors
-  static const Color success = Color(0xFF00B894);
-  static const Color warning = Color(0xFFFDCB6E);
-  static const Color error = Color(0xFFE17055);
-  static const Color info = Color(0xFF74B9FF);
-
-  // Text colors
-  static const Color darkTextPrimary = Color(0xFFFFFFFF);
-  static const Color darkTextSecondary = Color(0xFFB2BEC3);
-  static const Color lightTextPrimary = Color(0xFF0F172A); // Lighter dark-navy for contrast
-  static const Color lightTextSecondary = Color(0xFF555E68);
-
-  // Card colors
-  static const Color cardDark = Color(0xFF45484D);
-  static const Color cardLight = Color(0xFF194B85);
-
-  // Border colors
-  static const Color borderDark = Color(0xFF55595E);
-  static const Color borderLight = Color(0xFFD1D5DB);
-
-  // Shimmer (adaptive helper methods instead of constants)
+  // Shimmer
   static Color shimmerBaseColor(bool isDark) =>
-      isDark ? const Color(0xFF2C2E30) : const Color(0xFF153B6A);
+      isDark ? const Color(0xFF33343B) : const Color(0xFFEAFBFF);
   
   static Color shimmerHighlightColor(bool isDark) =>
-      isDark ? const Color(0xFF45484D) : const Color(0xFF194B85);
-
-  // Online/offline
-  static const Color online = Color(0xFF00B894);
-  static const Color offline = Color(0xFF555E68);
+      isDark ? const Color(0xFF06457F) : const Color(0xFF06457F);
 
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [primary, secondary],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+    colors: [primary, primary],
   );
 
   static const LinearGradient darkCardGradient = LinearGradient(
-    colors: [Color(0xFF45484D), Color(0xFF010817)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+    colors: [primary, primary],
   );
 
   // Adaptive helpers

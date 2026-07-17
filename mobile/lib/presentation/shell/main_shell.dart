@@ -5,15 +5,15 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/dashboard.controller.dart';
 import '../../controllers/mqtt.controller.dart';
 
-const Color _primary = Color(0xFF4C6FFF);
-const Color _secondary = Color(0xFF6C5CE7);
-const Color _darkBg = Color(0xFF010817);
-const Color _lightBg = Color(0xFF194B85); // Deep blue bar background in Light Mode
-const Color _darkTextSecondary = Color(0xFFB2BEC3);
-const Color _lightTextSecondary = Colors.white60; // Light secondary color for unselected items
-const Color _borderDark = Color(0xFF55595E);
-const Color _borderLight = Color(0xFF103560);
-const Color _error = Color(0xFFE17055);
+const Color _primary = Color(0xFF06457F);
+const Color _secondary = Color(0xFF06457F);
+const Color _darkBg = Color(0xFF33343B);
+const Color _lightBg = Color(0xFF06457F);
+const Color _darkTextSecondary = Color(0xFF33343B);
+const Color _lightTextSecondary = Color(0xFFEAFBFF);
+const Color _borderDark = Color(0xFF06457F);
+const Color _borderLight = Color(0xFFEAFBFF);
+const Color _error = Color(0xFF06457F);
 
 class MainShell extends ConsumerStatefulWidget {
   final StatefulNavigationShell navigationShell;

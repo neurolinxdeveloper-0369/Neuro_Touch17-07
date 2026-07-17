@@ -5,9 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/utils/extensions.dart';
 
-const Color _primary = Color(0xFF4C6FFF);
-const Color _darkBg = Color(0xFF010817);
-const Color _success = Color(0xFF00B894);
+const Color _primary = Color(0xFF06457F);
+const Color _darkBg = Color(0xFF33343B);
+const Color _success = Color(0xFF06457F);
 
 enum _ProvisionStep { instructions, scanning, connecting, naming, done, error }
 
@@ -82,11 +82,11 @@ class _SoftApFlowScreenState extends ConsumerState<SoftApFlowScreen> {
     final isDark = context.isDark;
 
     return Scaffold(
-      backgroundColor: isDark ? _darkBg : Colors.white,
+      backgroundColor: isDark ? _darkBg : const Color(0xFFEAFBFF),
       appBar: AppBar(
         title: Text('SoftAP Setup',
             style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-        backgroundColor: isDark ? _darkBg : Colors.white,
+        backgroundColor: isDark ? _darkBg : const Color(0xFFEAFBFF),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),

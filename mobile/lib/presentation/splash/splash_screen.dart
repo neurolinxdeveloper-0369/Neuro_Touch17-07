@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../controllers/auth.controller.dart';
+import '../../core/theme/app_colors.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -71,46 +72,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final screenSize = MediaQuery.sizeOf(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF010817),
+      backgroundColor: AppColors.darkBg,
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF010817), Color(0xFF45484D), Color(0xFF0D1438)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: [0.0, 0.5, 1.0],
-          ),
-        ),
+        color: AppColors.darkBg,
         child: Stack(
           children: [
-            // Background decorative circles
-            Positioned(
-              top: -screenSize.width * 0.3,
-              right: -screenSize.width * 0.2,
-              child: Container(
-                width: screenSize.width * 0.7,
-                height: screenSize.width * 0.7,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF4C6FFF).withOpacity(0.08),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -screenSize.width * 0.2,
-              left: -screenSize.width * 0.15,
-              child: Container(
-                width: screenSize.width * 0.6,
-                height: screenSize.width * 0.6,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF6C5CE7).withOpacity(0.06),
-                ),
-              ),
-            ),
-
             // Main content
             Center(
               child: AnimatedBuilder(
@@ -129,20 +97,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             width: screenSize.width * 0.22,
                             height: screenSize.width * 0.22,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF4C6FFF), Color(0xFF6C5CE7)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
+                              color: AppColors.primaryCard,
                               borderRadius: BorderRadius.circular(
                                   screenSize.width * 0.055),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF4C6FFF).withOpacity(0.5),
-                                  blurRadius: 32,
-                                  offset: const Offset(0, 12),
-                                ),
-                              ],
                             ),
                             child: Center(
                               child: Icon(
@@ -157,11 +114,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         SizedBox(height: screenSize.height * 0.03),
 
                         // App name
-                        Text(
+                        const Text(
                           'Neuro Touch',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: screenSize.width * 0.08,
+                            fontSize: 28,
                             fontWeight: FontWeight.w700,
                             letterSpacing: -0.5,
                             fontFamily: 'Inter',
@@ -170,11 +127,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
                         SizedBox(height: screenSize.height * 0.008),
 
-                        Text(
+                        const Text(
                           'Smart Home, Reimagined',
                           style: TextStyle(
-                            color: const Color(0xFFB2BEC3),
-                            fontSize: screenSize.width * 0.038,
+                            color: Colors.white,
+                            fontSize: 14,
                             fontWeight: FontWeight.w400,
                             letterSpacing: 0.5,
                             fontFamily: 'Inter',
@@ -188,7 +145,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           width: screenSize.width * 0.08,
                           height: screenSize.width * 0.08,
                           child: const CircularProgressIndicator(
-                            color: Color(0xFF4C6FFF),
+                            color: Colors.white,
                             strokeWidth: 2.5,
                           ),
                         ),
@@ -208,11 +165,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 animation: _fadeAnim,
                 builder: (context, child) => FadeTransition(
                   opacity: _fadeAnim,
-                  child: Text(
+                  child: const Text(
                     'v1.0.0',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: const Color(0xFFB2BEC3).withOpacity(0.4),
+                      color: Colors.white60,
                       fontSize: 12,
                       fontFamily: 'Inter',
                     ),

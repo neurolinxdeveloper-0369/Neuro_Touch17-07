@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-const Color _cardDark = Color(0xFF45484D);
-const Color _primary = Color(0xFF4C6FFF);
-const Color _borderDark = Color(0xFF55595E);
+const Color _cardDark = Color(0xFF06457F);
+const Color _primary = Color(0xFF06457F);
+const Color _borderDark = Color(0xFF06457F);
 const Color _darkTextPrimary = Color(0xFFFFFFFF);
-const Color _darkTextSecondary = Color(0xFFB2BEC3);
-const Color _surface = Color(0xFFF5F5F5);
-const Color _lightTextPrimary = Color(0xFF0F172A);
-const Color _lightTextSecondary = Color(0xFF555E68);
-const Color _borderLight = Color(0xFFD1D5DB);
-const Color _error = Color(0xFFE17055);
+const Color _darkTextSecondary = Color(0xFFFFFFFF);
+const Color _surface = Color(0xFFEAFBFF);
+const Color _lightTextPrimary = Color(0xFF06457F);
+const Color _lightTextSecondary = Color(0xFF06457F);
+const Color _borderLight = Color(0xFF06457F);
+const Color _error = Color(0xFF06457F);
 
 class AuthTextField extends StatelessWidget {
   final TextEditingController controller;

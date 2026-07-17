@@ -14,13 +14,13 @@ class AppTheme {
       primaryColor: AppColors.primary,
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
-        secondary: AppColors.secondary,
+        secondary: AppColors.primary,
         surface: AppColors.cardDark,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
         onSurface: AppColors.darkTextPrimary,
-        error: AppColors.error,
-        onError: Colors.white,
+        error: Colors.white,
+        onError: AppColors.primary,
       ),
       textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
         displayLarge: GoogleFonts.inter(color: AppColors.darkTextPrimary, fontWeight: FontWeight.w700),
@@ -66,11 +66,11 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: const BorderSide(color: Colors.white, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.error),
+          borderSide: const BorderSide(color: Colors.white),
         ),
         labelStyle: GoogleFonts.inter(color: AppColors.darkTextSecondary),
         hintStyle: GoogleFonts.inter(color: AppColors.darkTextSecondary),
@@ -80,8 +80,8 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.primary,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
@@ -90,8 +90,8 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary),
+          foregroundColor: Colors.white,
+          side: const BorderSide(color: Colors.white),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
@@ -99,14 +99,14 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
           textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.darkBg,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.darkTextSecondary,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: AppColors.primaryCard,
         showSelectedLabels: false,
         showUnselectedLabels: false,
         type: BottomNavigationBarType.fixed,
@@ -125,7 +125,7 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return Colors.white;
-          return AppColors.darkTextSecondary;
+          return AppColors.darkBg;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return AppColors.primary;
@@ -133,12 +133,12 @@ class AppTheme {
         }),
       ),
       sliderTheme: const SliderThemeData(
-        activeTrackColor: AppColors.primary,
-        thumbColor: AppColors.primary,
-        inactiveTrackColor: AppColors.borderDark,
+        activeTrackColor: Colors.white,
+        thumbColor: Colors.white,
+        inactiveTrackColor: AppColors.darkBg,
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.primary,
+        color: Colors.white,
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.cardDark,
@@ -169,8 +169,8 @@ class AppTheme {
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.primary,
         elevation: 4,
       ),
     );
@@ -184,12 +184,12 @@ class AppTheme {
       primaryColor: AppColors.primary,
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
-        secondary: AppColors.secondary,
-        surface: AppColors.cardLight, // Cards are deep blue
+        secondary: AppColors.primary,
+        surface: AppColors.cardLight,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
-        onSurface: Colors.white, // Text on cards/bars should be white
-        error: AppColors.error,
+        onSurface: Colors.white,
+        error: AppColors.primary,
         onError: Colors.white,
       ),
       textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
@@ -204,19 +204,19 @@ class AppTheme {
         labelLarge: GoogleFonts.inter(color: AppColors.lightTextPrimary, fontWeight: FontWeight.w500),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.cardLight, // AppBar is deep blue
+        backgroundColor: AppColors.primary,
         elevation: 0,
         scrolledUnderElevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle.light, // Light bar icons
+        systemOverlayStyle: SystemUiOverlayStyle.light,
         titleTextStyle: GoogleFonts.inter(
-          color: Colors.white, // White text
+          color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: const IconThemeData(color: Colors.white), // White icons
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.cardLight, // Cards are deep blue
+        color: AppColors.cardLight,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -225,7 +225,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: AppColors.lightBg,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.borderLight),
@@ -240,7 +240,7 @@ class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.error),
+          borderSide: const BorderSide(color: AppColors.primary),
         ),
         labelStyle: GoogleFonts.inter(color: AppColors.lightTextSecondary),
         hintStyle: GoogleFonts.inter(color: AppColors.lightTextSecondary),
@@ -262,11 +262,70 @@ class AppTheme {
           textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: AppColors.primary,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: AppColors.lightBg,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+      ),
+      dividerTheme: const DividerThemeData(
+        color: AppColors.borderLight,
+        thickness: 0.5,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.cardLight,
+        labelStyle: GoogleFonts.inter(color: Colors.white, fontSize: 12),
+        side: const BorderSide(color: AppColors.borderLight),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return Colors.white;
+          return AppColors.lightBg;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.primary;
+          return AppColors.borderLight;
+        }),
+      ),
+      sliderTheme: const SliderThemeData(
+        activeTrackColor: AppColors.primary,
+        thumbColor: AppColors.primary,
+        inactiveTrackColor: AppColors.borderLight,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.primary,
+      ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: AppColors.primary,
         contentTextStyle: GoogleFonts.inter(color: Colors.white),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         behavior: SnackBarBehavior.floating,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.lightBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titleTextStyle: GoogleFonts.inter(
+          color: AppColors.lightTextPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+        contentTextStyle: GoogleFonts.inter(
+          color: AppColors.lightTextSecondary,
+          fontSize: 14,
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.lightBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,

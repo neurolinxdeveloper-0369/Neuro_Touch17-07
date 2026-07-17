@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-const Color _cardDark = Color(0xFF45484D);
-const Color _borderDark = Color(0xFF55595E);
+const Color _cardDark = Color(0xFF06457F);
+const Color _borderDark = Color(0xFF06457F);
 const Color _darkTextPrimary = Color(0xFFFFFFFF);
-const Color _borderLight = Color(0xFFD1D5DB);
-const Color _lightTextPrimary = Color(0xFF0F172A);
+const Color _borderLight = Color(0xFF06457F);
+const Color _lightTextPrimary = Color(0xFF06457F);
 
 class SocialButton extends StatelessWidget {
   final String label;

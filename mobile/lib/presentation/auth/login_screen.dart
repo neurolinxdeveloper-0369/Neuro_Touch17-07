@@ -9,11 +9,11 @@ import 'widgets/auth_text_field.dart';
 import 'widgets/social_button.dart';
 import 'widgets/auth_header.dart';
 
-const Color _darkBg = Color(0xFF010817);
-const Color _borderDark = Color(0xFF55595E);
-const Color _darkTextSecondary = Color(0xFFB2BEC3);
-const Color _lightTextSecondary = Color(0xFF555E68);
-const Color _borderLight = Color(0xFFD1D5DB);
+const Color _darkBg = Color(0xFF33343B);
+const Color _borderDark = Color(0xFF06457F);
+const Color _darkTextSecondary = Color(0xFFFFFFFF);
+const Color _lightTextSecondary = Color(0xFF06457F);
+const Color _borderLight = Color(0xFF06457F);
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -91,7 +91,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       }
     });
 
-    final bgColor = isDark ? _darkBg : Colors.white;
+    final bgColor = isDark ? _darkBg : const Color(0xFFEAFBFF);
     final textSecondary = isDark ? _darkTextSecondary : _lightTextSecondary;
 
     return Scaffold(

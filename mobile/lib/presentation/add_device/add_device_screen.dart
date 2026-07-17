@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/utils/extensions.dart';
 
-const Color _primary = Color(0xFF4C6FFF);
-const Color _darkBg = Color(0xFF010817);
+const Color _primary = Color(0xFF06457F);
+const Color _darkBg = Color(0xFF33343B);
 
 class AddDeviceScreen extends ConsumerWidget {
   const AddDeviceScreen({super.key});
@@ -16,7 +16,7 @@ class AddDeviceScreen extends ConsumerWidget {
     final screenSize = MediaQuery.sizeOf(context);
 
     return Scaffold(
-      backgroundColor: isDark ? _darkBg : Colors.white,
+      backgroundColor: isDark ? _darkBg : const Color(0xFFEAFBFF),
       appBar: AppBar(
         title: Text('Add Device',
             style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
