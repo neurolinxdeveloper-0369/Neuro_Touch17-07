@@ -279,7 +279,6 @@ class SettingsScreen extends ConsumerWidget {
             onPressed: () {
               Navigator.pop(context);
               ref.read(authControllerProvider.notifier).logout();
-              context.go('/login');
             },
             child: const Text('Sign Out',
                 style: TextStyle(color: _error)),
