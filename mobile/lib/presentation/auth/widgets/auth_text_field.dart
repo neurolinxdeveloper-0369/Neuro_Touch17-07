@@ -48,10 +48,10 @@ class AuthTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fillColor = isDark ? _cardDark : _surface;
-    final borderColor = isDark ? _borderDark : _borderLight;
-    final textColor = isDark ? _darkTextPrimary : _lightTextPrimary;
-    final hintColor = isDark ? _darkTextSecondary : _lightTextSecondary;
+    const fillColor = Colors.white;
+    const borderColor = Color(0xFF06457F);
+    const textColor = Color(0xFF06457F);
+    final hintColor = const Color(0xFF06457F).withOpacity(0.6);
 
     return TextFormField(
       controller: controller,

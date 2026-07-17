@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-const Color _cardDark = Color(0xFF06457F);
-const Color _borderDark = Color(0xFF06457F);
-const Color _darkTextPrimary = Color(0xFFFFFFFF);
-const Color _borderLight = Color(0xFF06457F);
-const Color _lightTextPrimary = Color(0xFF06457F);
 
 class SocialButton extends StatelessWidget {
   final String label;
@@ -25,9 +20,9 @@ class SocialButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isDark ? _cardDark : Colors.white;
-    final borderColor = isDark ? _borderDark : _borderLight;
-    final textColor = isDark ? _darkTextPrimary : _lightTextPrimary;
+    const bgColor = Color(0xFF06457F);
+    const borderColor = Color(0xFF06457F);
+    const textColor = Colors.white;
 
     return GestureDetector(
       onTap: onTap,

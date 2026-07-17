@@ -12,15 +12,18 @@ class AuthHeader extends StatelessWidget {
   final String title;
   final String subtitle;
 
+  final bool? isForceDark;
+
   const AuthHeader({
     super.key,
     required this.title,
     required this.subtitle,
+    this.isForceDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = isForceDark ?? (Theme.of(context).brightness == Brightness.dark);
     final textPrimary = isDark ? _darkTextPrimary : _lightTextPrimary;
     final textSecondary = isDark ? _darkTextSecondary : _lightTextSecondary;
     final screenWidth = MediaQuery.sizeOf(context).width;

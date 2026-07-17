@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,12 +9,6 @@ import '../../core/utils/extensions.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/social_button.dart';
 import 'widgets/auth_header.dart';
-
-const Color _darkBg = Color(0xFF000000);
-const Color _borderDark = Color(0xFF06457F);
-const Color _darkTextSecondary = Color(0xFFFFFFFF);
-const Color _lightTextSecondary = Color(0xFF06457F);
-const Color _borderLight = Color(0xFF06457F);
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -77,7 +72,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.isDark;
     final screenSize = MediaQuery.sizeOf(context);
     final authState = ref.watch(authControllerProvider);
 
@@ -91,8 +85,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       }
     });
 
-    final bgColor = isDark ? _darkBg : const Color(0xFFEAFBFF);
-    final textSecondary = isDark ? _darkTextSecondary : _lightTextSecondary;
+    // Forced dark/black background and white text for the login screen
+    const bgColor = Color(0xFF000000);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -111,15 +105,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(height: screenSize.height * 0.02),
-
-                    // Header
-                    const AuthHeader(
-                      title: 'Welcome to Neuro Touch',
-                      subtitle: 'Sign in or sign up using your phone number or Google account',
+                    // Top Illustration Image
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        'assets/images/login_illustration.jpg',
+                        height: 180,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
                     ),
 
-                    SizedBox(height: screenSize.height * 0.04),
+                    const SizedBox(height: 24),
+
+                    // Header (Forced white text)
+                    const AuthHeader(
+                      title: 'Welcome to Neuro Touch',
+                      subtitle: 'Sign in or sign up using your phone number or social accounts',
+                      isForceDark: true,
+                    ),
+
+                    const SizedBox(height: 24),
 
                     // Phone field
                     AuthTextField(
@@ -128,7 +134,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       keyboardType: TextInputType.phone,
                       prefixIcon: Icons.phone_outlined,
                       validator: Validators.validatePhone,
-                      isDark: isDark,
+                      isDark: true,
                     ),
 
                     const SizedBox(height: 16),
@@ -139,17 +145,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       label: 'Full Name (Optional for first-time sign up)',
                       keyboardType: TextInputType.name,
                       prefixIcon: Icons.person_outline_rounded,
-                      isDark: isDark,
+                      isDark: true,
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
-                    // Send OTP button
+                    // Send OTP button (bg #06457F, text white)
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: authState.isLoading ? null : _sendOtp,
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF06457F),
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
@@ -164,38 +172,105 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             : Text(
                                 'Send OTP Verification',
                                 style: GoogleFonts.inter(
-                                    fontSize: 16, fontWeight: FontWeight.w600),
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600),
                               ),
                       ),
                     ),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
                     // Divider
-                    Row(children: [
-                      Expanded(child: Divider(color: isDark ? _borderDark : _borderLight)),
+                    const Row(children: [
+                      Expanded(child: Divider(color: Colors.white30)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           'or continue with',
-                          style: GoogleFonts.inter(
-                              color: textSecondary, fontSize: 13),
+                          style: TextStyle(
+                              color: Colors.white70, fontSize: 13, fontFamily: 'Inter'),
                         ),
                       ),
-                      Expanded(child: Divider(color: isDark ? _borderDark : _borderLight)),
+                      Expanded(child: Divider(color: Colors.white30)),
                     ]),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
-                    // Google Social button
-                    SocialButton(
-                      label: 'Continue with Google',
-                      assetPath: 'assets/images/google_logo.png',
-                      onTap: _googleSignIn,
-                      isDark: isDark,
+                    // Social login buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SocialButton(
+                            label: 'Google',
+                            assetPath: 'assets/images/google_logo.png',
+                            onTap: _googleSignIn,
+                            isDark: true,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SocialButton(
+                            label: 'Apple',
+                            icon: CupertinoIcons.apple,
+                            onTap: () {
+                              context.showInfoSnackBar('Sign in with Apple is not configured for this device yet.');
+                            },
+                            isDark: true,
+                          ),
+                        ),
+                      ],
                     ),
 
-                    SizedBox(height: context.padding.bottom + 16),
+                    const SizedBox(height: 48),
+
+                    // Terms and Conditions / Privacy Policy and version at bottom
+                    Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: () => context.showInfoSnackBar('Terms and Conditions'),
+                              child: const Text(
+                                'Terms & Conditions',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: Colors.white70,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ),
+                            const Text('  |  ', style: TextStyle(color: Colors.white30, fontSize: 12)),
+                            GestureDetector(
+                              onTap: () => context.showInfoSnackBar('Privacy Policy'),
+                              child: const Text(
+                                'Privacy Policy',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: Colors.white70,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Neuro Touch V1.1',
+                          style: TextStyle(
+                            color: Colors.white38,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'Inter',
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -206,5 +281,3 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 }
-
-
