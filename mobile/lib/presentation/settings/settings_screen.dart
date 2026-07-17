@@ -68,14 +68,19 @@ class SettingsScreen extends ConsumerWidget {
                           CircleAvatar(
                             radius: 28,
                             backgroundColor: Colors.white.withOpacity(0.2),
-                            child: Text(
-                              user?.name.initials ?? '?',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                            backgroundImage: (user?.profilePictureUrl != null && user!.profilePictureUrl!.isNotEmpty)
+                                ? NetworkImage(user.profilePictureUrl!)
+                                : null,
+                            child: (user?.profilePictureUrl == null || user!.profilePictureUrl!.isEmpty)
+                                ? Text(
+                                    user?.name.initials ?? '?',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  )
+                                : null,
                           ),
                           const SizedBox(width: 14),
                           Expanded(

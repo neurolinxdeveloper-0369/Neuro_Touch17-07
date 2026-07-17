@@ -160,14 +160,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         child: CircleAvatar(
                           radius: 20,
                           backgroundColor: _primary.withOpacity(0.15),
-                          child: Text(
-                            (user?.name.initials) ?? '?',
-                            style: GoogleFonts.inter(
-                              color: _primary,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                          backgroundImage: (user?.profilePictureUrl != null && user!.profilePictureUrl!.isNotEmpty)
+                              ? NetworkImage(user.profilePictureUrl!)
+                              : null,
+                          child: (user?.profilePictureUrl == null || user!.profilePictureUrl!.isEmpty)
+                              ? Text(
+                                  (user?.name.initials) ?? '?',
+                                  style: GoogleFonts.inter(
+                                    color: _primary,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                )
+                              : null,
                         ),
                       ),
                     ],

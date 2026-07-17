@@ -31,14 +31,19 @@ class ProfileScreen extends ConsumerWidget {
                 CircleAvatar(
                   radius: 48,
                   backgroundColor: const Color(0xFF4C6FFF).withOpacity(0.15),
-                  child: Text(
-                    user?.name.initials ?? '?',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF4C6FFF),
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  backgroundImage: (user?.profilePictureUrl != null && user!.profilePictureUrl!.isNotEmpty)
+                      ? NetworkImage(user.profilePictureUrl!)
+                      : null,
+                  child: (user?.profilePictureUrl == null || user!.profilePictureUrl!.isEmpty)
+                      ? Text(
+                          user?.name.initials ?? '?',
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF4C6FFF),
+                            fontSize: 32,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 Text(
