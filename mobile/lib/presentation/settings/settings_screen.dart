@@ -277,12 +277,12 @@ class SettingsScreen extends ConsumerWidget {
         content: const Text('Are you sure you want to sign out?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.of(context, rootNavigator: true).pop();
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 ref.read(authControllerProvider.notifier).logout();
               });
