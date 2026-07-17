@@ -4,7 +4,7 @@ class AppColors {
   AppColors._();
 
   // Core background colors (1st color of each theme)
-  static const Color darkBg = Color(0xFF33343B);
+  static const Color darkBg = Color(0xFF000000);
   static const Color lightBg = Color(0xFFEAFBFF);
   
   // Cards background for both themes (2nd color)
@@ -44,11 +44,11 @@ class AppColors {
   static const Color info = Color(0xFF06457F);
   
   static const Color online = Color(0xFFFFFFFF);
-  static const Color offline = Color(0xFF33343B);
+  static const Color offline = Color(0xFF000000);
 
   // Shimmer
   static Color shimmerBaseColor(bool isDark) =>
-      isDark ? const Color(0xFF33343B) : const Color(0xFFEAFBFF);
+      isDark ? const Color(0xFF000000) : const Color(0xFFEAFBFF);
   
   static Color shimmerHighlightColor(bool isDark) =>
       isDark ? const Color(0xFF06457F) : const Color(0xFF06457F);

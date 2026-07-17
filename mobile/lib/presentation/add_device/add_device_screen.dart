@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/utils/extensions.dart';
 
 const Color _primary = Color(0xFF06457F);
-const Color _darkBg = Color(0xFF33343B);
+const Color _darkBg = Color(0xFF000000);
 
 class AddDeviceScreen extends ConsumerWidget {
   const AddDeviceScreen({super.key});

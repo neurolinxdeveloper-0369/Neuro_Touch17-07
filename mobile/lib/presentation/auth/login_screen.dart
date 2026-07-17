@@ -9,7 +9,7 @@ import 'widgets/auth_text_field.dart';
 import 'widgets/social_button.dart';
 import 'widgets/auth_header.dart';
 
-const Color _darkBg = Color(0xFF33343B);
+const Color _darkBg = Color(0xFF000000);
 const Color _borderDark = Color(0xFF06457F);
 const Color _darkTextSecondary = Color(0xFFFFFFFF);
 const Color _lightTextSecondary = Color(0xFF06457F);

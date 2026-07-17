@@ -10,7 +10,7 @@ import '../../core/utils/extensions.dart';
 
 const Color _primary = Color(0xFF06457F);
 const Color _secondary = Color(0xFF06457F);
-const Color _darkBg = Color(0xFF33343B);
+const Color _darkBg = Color(0xFF000000);
 const Color _cardDark = Color(0xFF06457F);
 const Color _darkTextPrimary = Color(0xFFFFFFFF);
 const Color _darkTextSecondary = Color(0xFFFFFFFF);
