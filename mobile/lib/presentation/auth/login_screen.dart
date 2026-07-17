@@ -270,7 +270,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           ),
                           const SizedBox(height: 12),
                           Container(
-                            width: 140,
+                            width: 240,
                             height: 2,
                             decoration: BoxDecoration(
                               color: Colors.white,
