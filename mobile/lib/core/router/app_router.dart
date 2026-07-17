@@ -23,15 +23,36 @@ import '../../presentation/settings/profile_screen.dart';
 import '../../presentation/settings/webview_screen.dart';
 
 
+import 'dart:async';
+
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+class GoRouterRefreshStream extends ChangeNotifier {
+  late final StreamSubscription<dynamic> _subscription;
+
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authControllerProvider);
+  final listenable = GoRouterRefreshStream(
+    ref.watch(authControllerProvider.notifier).stream,
+  );
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
+    refreshListenable: listenable,
     redirect: (context, state) {
+      final authState = ref.read(authControllerProvider);
       final isOnSplash = state.matchedLocation == '/splash';
       final isOnAuth = state.matchedLocation.startsWith('/login') ||
           state.matchedLocation.startsWith('/otp-verify');
