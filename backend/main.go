@@ -23,6 +23,7 @@ func main() {
 	// 2. Automigrate Database Schema
 	log.Println("Migrating database schemas...")
 	err := config.AppConfig.DB.AutoMigrate(
+		&models.User{},
 		&models.OTPVerification{},
 		&models.Home{},
 		&models.HomeMember{},

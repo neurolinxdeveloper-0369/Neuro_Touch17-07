@@ -7,8 +7,8 @@ import (
 type User struct {
 	ID           string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
 	Name         string    `gorm:"type:varchar(100);not null" json:"name"`
-	Email        *string   `gorm:"uniqueIndex;type:varchar(255)" json:"email"`
-	Phone        *string   `gorm:"uniqueIndex;type:varchar(20)" json:"phone"`
+	Email        *string   `gorm:"type:varchar(255)" json:"email"`
+	Phone        *string   `gorm:"type:varchar(20)" json:"phone"`
 	ProfilePic   *string   `gorm:"type:text;column:profile_pic" json:"profile_pic"`
 	AuthProvider string    `gorm:"type:varchar(20);not null;column:auth_provider" json:"auth_provider"`
 	CreatedAt    time.Time `gorm:"type:timestamptz;not null;default:CURRENT_TIMESTAMP" json:"created_at"`
