@@ -53,7 +53,9 @@ class AuthController extends StateNotifier<AuthState> {
         _storage = storage,
         _googleSignIn = GoogleSignIn(
           scopes: ['email', 'profile'],
-          serverClientId: const String.fromEnvironment('GOOGLE_CLIENT_ID'),
+          serverClientId: const String.fromEnvironment('GOOGLE_CLIENT_ID').isEmpty
+              ? null
+              : const String.fromEnvironment('GOOGLE_CLIENT_ID'),
         ),
         super(const AuthState()) {
     _init();

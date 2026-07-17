@@ -48,7 +48,9 @@ class AuthService {
 
   static final _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    serverClientId: const String.fromEnvironment('GOOGLE_CLIENT_ID'),
+    serverClientId: const String.fromEnvironment('GOOGLE_CLIENT_ID').isEmpty
+        ? null
+        : const String.fromEnvironment('GOOGLE_CLIENT_ID'),
   );
 
   AuthService(this._api);
