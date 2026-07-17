@@ -138,7 +138,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 48),
 
                     // Header (Forced white text, brand accent hidden)
                     const AuthHeader(
