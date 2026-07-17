@@ -124,7 +124,9 @@ class AuthController extends StateNotifier<AuthState> {
 
       final user = await _repo.googleAuth(idToken);
       state = AuthState(status: AuthStatus.authenticated, user: user);
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Google Sign-in Error: $e');
+      debugPrint('Google Sign-in Stack: $stack');
       state = state.copyWith(
         status: AuthStatus.error,
         error: _parseError(e),
