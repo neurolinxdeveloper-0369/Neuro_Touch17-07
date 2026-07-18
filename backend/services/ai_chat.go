@@ -40,55 +40,53 @@ func InitAIChat() {
 func getOllamaChatResponse(homeID string, message string, history []map[string]interface{}) (string, error) {
 	db := config.AppConfig.DB
 
-	// --- 1. Fetch Database Context ---
+	// --- 1. Fetch Home and its Devices directly ---
 	var home models.Home
-	if err := db.Preload("Floors.Rooms.Devices.Switches").First(&home, "id = ?", homeID).Error; err != nil {
+	if err := db.First(&home, "id = ?", homeID).Error; err != nil {
 		return "", fmt.Errorf("home not found in database: %v", err)
+	}
+
+	var devices []models.Device
+	if err := db.Preload("Switches").Find(&devices, "home_id = ?", homeID).Error; err != nil {
+		return "", fmt.Errorf("failed to load devices: %v", err)
 	}
 
 	// Structure a clean JSON description of the smart home setup
 	type DeviceCtx struct {
-		ID         string   `json:"id"`
-		Name       string   `json:"name"`
-		Type       string   `json:"type"`
-		IsOnline   bool     `json:"is_online"`
-		Switches   []string `json:"switches,omitempty"`
+		ID       string   `json:"id"`
+		Name     string   `json:"name"`
+		Type     string   `json:"type"`
+		IsOnline bool     `json:"is_online"`
+		Switches []string `json:"switches,omitempty"`
 	}
 
-	type RoomCtx struct {
-		Name    string      `json:"name"`
-		Devices []DeviceCtx `json:"devices"`
+	type HomeCtx struct {
+		Name      string      `json:"name"`
+		HomeType  string      `json:"home_type"`
+		Floors    int         `json:"floors,omitempty"`
+		Devices   []DeviceCtx `json:"devices"`
 	}
 
-	type FloorCtx struct {
-		Name  string    `json:"name"`
-		Rooms []RoomCtx `json:"rooms"`
+	homeCtx := HomeCtx{
+		Name:     home.Name,
+		HomeType: home.HomeType,
+		Floors:   home.FloorCount,
 	}
 
-	var homeLayout []FloorCtx
-
-	for _, f := range home.Floors {
-		floorCtx := FloorCtx{Name: f.Name}
-		for _, r := range f.Rooms {
-			roomCtx := RoomCtx{Name: r.Name}
-			for _, d := range r.Devices {
-				devCtx := DeviceCtx{
-					ID:       d.ID,
-					Name:     d.Name,
-					Type:     d.DeviceType,
-					IsOnline: d.IsOnline,
-				}
-				for _, sw := range d.Switches {
-					devCtx.Switches = append(devCtx.Switches, fmt.Sprintf("Switch %d: %s", sw.SwitchIndex, sw.Name))
-				}
-				roomCtx.Devices = append(roomCtx.Devices, devCtx)
-			}
-			floorCtx.Rooms = append(floorCtx.Rooms, roomCtx)
+	for _, d := range devices {
+		devCtx := DeviceCtx{
+			ID:       d.ID,
+			Name:     d.Name,
+			Type:     d.DeviceType,
+			IsOnline: d.IsOnline,
 		}
-		homeLayout = append(homeLayout, floorCtx)
+		for _, sw := range d.Switches {
+			devCtx.Switches = append(devCtx.Switches, fmt.Sprintf("Switch %d: %s", sw.SwitchIndex, sw.Name))
+		}
+		homeCtx.Devices = append(homeCtx.Devices, devCtx)
 	}
 
-	layoutJSON, _ := json.MarshalIndent(homeLayout, "", "  ")
+	layoutJSON, _ := json.MarshalIndent(homeCtx, "", "  ")
 
 	// --- 2. Build Ollama System Prompt ---
 	systemPrompt := fmt.Sprintf(`You are "Neuro Touch AI Assistant", a smart home concierge. You help control the user's automated home.
