@@ -34,18 +34,6 @@ func SetupRoutes(app *fiber.App) {
 	protected.Put("/homes/:id/members/:userId", controllers.UpdateMemberPermission)
 	protected.Delete("/homes/:id/members/:userId", controllers.RemoveMember)
 
-	// Floors
-	protected.Get("/homes/:id/floors", controllers.GetFloors)
-	protected.Post("/homes/:id/floors", controllers.CreateFloor)
-	protected.Put("/homes/:id/floors/:floorId", controllers.UpdateFloor)
-	protected.Delete("/homes/:id/floors/:floorId", controllers.DeleteFloor)
-
-	// Rooms
-	protected.Get("/homes/:id/rooms", controllers.GetRooms)
-	protected.Post("/homes/:id/rooms", controllers.CreateRoom)
-	protected.Put("/homes/:id/rooms/:roomId", controllers.UpdateRoom)
-	protected.Delete("/homes/:id/rooms/:roomId", controllers.DeleteRoom)
-
 	// Devices
 	protected.Get("/homes/:id/devices", controllers.GetHomeDevices)
 	protected.Get("/devices/:id", controllers.GetDevice)

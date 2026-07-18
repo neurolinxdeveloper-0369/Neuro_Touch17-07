@@ -19,7 +19,7 @@ func checkHomeAccess(db *gorm.DB, homeID, userID string, requireFullAccess bool)
 		return nil, err
 	}
 	if requireFullAccess && member.PermissionLevel != "full_access" {
-		return nil, gorm.ErrRecordNotFound // Or simulated auth check
+		return nil, gorm.ErrRecordNotFound
 	}
 	return &member, nil
 }
@@ -57,9 +57,13 @@ func GetHomes(c *fiber.Ctx) error {
 	})
 }
 
-// CreateHome
+// CreateHome — accepts name, home_type, floor_count, network_ssid, network_password
 type CreateHomeInput struct {
-	Name string `json:"name"`
+	Name            string  `json:"name"`
+	HomeType        string  `json:"home_type"`         // flat | villa | building | office
+	FloorCount      int     `json:"floor_count"`       // 0 for flat, user-entered for others
+	NetworkSSID     *string `json:"network_ssid"`      // optional Wi-Fi SSID
+	NetworkPassword *string `json:"network_password"`  // optional Wi-Fi password
 }
 
 func CreateHome(c *fiber.Ctx) error {
@@ -69,16 +73,40 @@ func CreateHome(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil || input.Name == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error":   "Invalid home details",
+			"error":   "Home name is required",
 		})
+	}
+
+	// Validate home type
+	validTypes := map[string]bool{"flat": true, "villa": true, "building": true, "office": true}
+	if input.HomeType == "" {
+		input.HomeType = "flat"
+	}
+	if !validTypes[input.HomeType] {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Invalid home_type. Must be one of: flat, villa, building, office",
+		})
+	}
+
+	// Flat type has no floors
+	if input.HomeType == "flat" {
+		input.FloorCount = 0
+	}
+	if input.FloorCount < 0 {
+		input.FloorCount = 0
 	}
 
 	// Create transaction
 	tx := config.AppConfig.DB.Begin()
 
 	home := models.Home{
-		Name:    input.Name,
-		OwnerID: userID,
+		Name:            input.Name,
+		OwnerID:         userID,
+		HomeType:        input.HomeType,
+		FloorCount:      input.FloorCount,
+		NetworkSSID:     input.NetworkSSID,
+		NetworkPassword: input.NetworkPassword,
 	}
 
 	if err := tx.Create(&home).Error; err != nil {
@@ -145,7 +173,13 @@ func GetHome(c *fiber.Ctx) error {
 	})
 }
 
-// UpdateHome
+// UpdateHome — update name and/or network details
+type UpdateHomeInput struct {
+	Name            string  `json:"name"`
+	NetworkSSID     *string `json:"network_ssid"`
+	NetworkPassword *string `json:"network_password"`
+}
+
 func UpdateHome(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(string)
 	homeID := c.Params("id")
@@ -157,11 +191,11 @@ func UpdateHome(c *fiber.Ctx) error {
 		})
 	}
 
-	var input CreateHomeInput
-	if err := c.BodyParser(&input); err != nil || input.Name == "" {
+	var input UpdateHomeInput
+	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error":   "Invalid home name",
+			"error":   "Invalid input",
 		})
 	}
 
@@ -173,7 +207,16 @@ func UpdateHome(c *fiber.Ctx) error {
 		})
 	}
 
-	home.Name = input.Name
+	if input.Name != "" {
+		home.Name = input.Name
+	}
+	if input.NetworkSSID != nil {
+		home.NetworkSSID = input.NetworkSSID
+	}
+	if input.NetworkPassword != nil {
+		home.NetworkPassword = input.NetworkPassword
+	}
+
 	config.AppConfig.DB.Save(&home)
 
 	return c.JSON(fiber.Map{
@@ -210,7 +253,7 @@ func DeleteHome(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"success": true,
+		"success":  true,
 		"message": "Home deleted successfully",
 	})
 }
@@ -420,319 +463,6 @@ func RemoveMember(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"success": true,
 		"message": "Member removed successfully",
-	})
-}
-
-// --- Floors Controllers ---
-
-func GetFloors(c *fiber.Ctx) error {
-	userID := c.Locals("userID").(string)
-	homeID := c.Params("id")
-
-	if _, err := checkHomeAccess(config.AppConfig.DB, homeID, userID, false); err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"success": false,
-			"error":   "Access denied",
-		})
-	}
-
-	var floors []models.Floor
-	if err := config.AppConfig.DB.Order("order_index asc").Find(&floors, "home_id = ?", homeID).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false,
-			"error":   "Failed to retrieve floors",
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"success": true,
-		"floors":  floors,
-	})
-}
-
-type FloorInput struct {
-	Name       string `json:"name"`
-	OrderIndex *int   `json:"order_index,omitempty"`
-}
-
-func CreateFloor(c *fiber.Ctx) error {
-	userID := c.Locals("userID").(string)
-	homeID := c.Params("id")
-
-	if _, err := checkHomeAccess(config.AppConfig.DB, homeID, userID, true); err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"success": false,
-			"error":   "Administrator permissions required",
-		})
-	}
-
-	var input FloorInput
-	if err := c.BodyParser(&input); err != nil || input.Name == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error":   "Invalid floor name",
-		})
-	}
-
-	order := 0
-	if input.OrderIndex != nil {
-		order = *input.OrderIndex
-	}
-
-	floor := models.Floor{
-		HomeID:     homeID,
-		Name:       input.Name,
-		OrderIndex: order,
-	}
-
-	if err := config.AppConfig.DB.Create(&floor).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false,
-			"error":   "Failed to create floor",
-		})
-	}
-
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"success": true,
-		"floor":   floor,
-	})
-}
-
-func UpdateFloor(c *fiber.Ctx) error {
-	userID := c.Locals("userID").(string)
-	homeID := c.Params("id")
-	floorID := c.Params("floorId")
-
-	if _, err := checkHomeAccess(config.AppConfig.DB, homeID, userID, true); err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"success": false,
-			"error":   "Administrator permissions required",
-		})
-	}
-
-	var input FloorInput
-	if err := c.BodyParser(&input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error":   "Invalid parameters",
-		})
-	}
-
-	var floor models.Floor
-	if err := config.AppConfig.DB.First(&floor, "id = ? AND home_id = ?", floorID, homeID).Error; err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"success": false,
-			"error":   "Floor not found",
-		})
-	}
-
-	if input.Name != "" {
-		floor.Name = input.Name
-	}
-	if input.OrderIndex != nil {
-		floor.OrderIndex = *input.OrderIndex
-	}
-
-	config.AppConfig.DB.Save(&floor)
-
-	return c.JSON(fiber.Map{
-		"success": true,
-		"floor":   floor,
-	})
-}
-
-func DeleteFloor(c *fiber.Ctx) error {
-	userID := c.Locals("userID").(string)
-	homeID := c.Params("id")
-	floorID := c.Params("floorId")
-
-	if _, err := checkHomeAccess(config.AppConfig.DB, homeID, userID, true); err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"success": false,
-			"error":   "Administrator permissions required",
-		})
-	}
-
-	var floor models.Floor
-	if err := config.AppConfig.DB.First(&floor, "id = ? AND home_id = ?", floorID, homeID).Error; err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"success": false,
-			"error":   "Floor not found",
-		})
-	}
-
-	config.AppConfig.DB.Delete(&floor)
-
-	return c.JSON(fiber.Map{
-		"success": true,
-		"message": "Floor deleted successfully",
-	})
-}
-
-// --- Rooms Controllers ---
-
-func GetRooms(c *fiber.Ctx) error {
-	userID := c.Locals("userID").(string)
-	homeID := c.Params("id")
-
-	if _, err := checkHomeAccess(config.AppConfig.DB, homeID, userID, false); err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"success": false,
-			"error":   "Access denied",
-		})
-	}
-
-	var rooms []models.Room
-	if err := config.AppConfig.DB.Order("order_index asc").Find(&rooms, "home_id = ?", homeID).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false,
-			"error":   "Failed to retrieve rooms",
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"success": true,
-		"rooms":   rooms,
-	})
-}
-
-type RoomInput struct {
-	FloorID    string `json:"floor_id"`
-	Name       string `json:"name"`
-	Icon       string `json:"icon"`
-	OrderIndex *int   `json:"order_index,omitempty"`
-}
-
-func CreateRoom(c *fiber.Ctx) error {
-	userID := c.Locals("userID").(string)
-	homeID := c.Params("id")
-
-	if _, err := checkHomeAccess(config.AppConfig.DB, homeID, userID, true); err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"success": false,
-			"error":   "Administrator permissions required",
-		})
-	}
-
-	var input RoomInput
-	if err := c.BodyParser(&input); err != nil || input.Name == "" || input.FloorID == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error":   "Floor ID and Room name are required",
-		})
-	}
-
-	// Verify floor belongs to this home
-	var floor models.Floor
-	if err := config.AppConfig.DB.First(&floor, "id = ? AND home_id = ?", input.FloorID, homeID).Error; err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error":   "Invalid floor ID for this home",
-		})
-	}
-
-	order := 0
-	if input.OrderIndex != nil {
-		order = *input.OrderIndex
-	}
-
-	iconStr := "room"
-	if input.Icon != "" {
-		iconStr = input.Icon
-	}
-
-	room := models.Room{
-		FloorID:    input.FloorID,
-		HomeID:     homeID,
-		Name:       input.Name,
-		Icon:       iconStr,
-		OrderIndex: order,
-	}
-
-	if err := config.AppConfig.DB.Create(&room).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"success": false,
-			"error":   "Failed to create room",
-		})
-	}
-
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"success": true,
-		"room":    room,
-	})
-}
-
-func UpdateRoom(c *fiber.Ctx) error {
-	userID := c.Locals("userID").(string)
-	homeID := c.Params("id")
-	roomID := c.Params("roomId")
-
-	if _, err := checkHomeAccess(config.AppConfig.DB, homeID, userID, true); err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"success": false,
-			"error":   "Administrator permissions required",
-		})
-	}
-
-	var input RoomInput
-	if err := c.BodyParser(&input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error":   "Invalid parameters",
-		})
-	}
-
-	var room models.Room
-	if err := config.AppConfig.DB.First(&room, "id = ? AND home_id = ?", roomID, homeID).Error; err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"success": false,
-			"error":   "Room not found",
-		})
-	}
-
-	if input.Name != "" {
-		room.Name = input.Name
-	}
-	if input.Icon != "" {
-		room.Icon = input.Icon
-	}
-	if input.OrderIndex != nil {
-		room.OrderIndex = *input.OrderIndex
-	}
-
-	config.AppConfig.DB.Save(&room)
-
-	return c.JSON(fiber.Map{
-		"success": true,
-		"room":    room,
-	})
-}
-
-func DeleteRoom(c *fiber.Ctx) error {
-	userID := c.Locals("userID").(string)
-	homeID := c.Params("id")
-	roomID := c.Params("roomId")
-
-	if _, err := checkHomeAccess(config.AppConfig.DB, homeID, userID, true); err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"success": false,
-			"error":   "Administrator permissions required",
-		})
-	}
-
-	var room models.Room
-	if err := config.AppConfig.DB.First(&room, "id = ? AND home_id = ?", roomID, homeID).Error; err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"success": false,
-			"error":   "Room not found",
-		})
-	}
-
-	config.AppConfig.DB.Delete(&room)
-
-	return c.JSON(fiber.Map{
-		"success": true,
-		"message": "Room deleted successfully",
 	})
 }
 

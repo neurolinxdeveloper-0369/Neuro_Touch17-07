@@ -24,14 +24,6 @@ class ApiConstants {
   static String homeMember(String homeId, String userId) =>
       '/homes/$homeId/members/$userId';
 
-  // --- Floors ---
-  static String homeFloors(String homeId) => '/homes/$homeId/floors';
-  static String floor(String homeId, String id) => '/homes/$homeId/floors/$id';
-
-  // --- Rooms ---
-  static String homeRooms(String homeId) => '/homes/$homeId/rooms';
-  static String room(String homeId, String id) => '/homes/$homeId/rooms/$id';
-
   // --- Devices ---
   static String homeDevices(String homeId) => '/homes/$homeId/devices';
   static String device(String id) => '/devices/$id';

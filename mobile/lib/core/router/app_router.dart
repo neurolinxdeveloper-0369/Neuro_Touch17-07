@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../controllers/auth.controller.dart';
+import '../../controllers/home_setup.controller.dart';
 import '../../presentation/splash/splash_screen.dart';
 import '../../presentation/auth/login_screen.dart';
 import '../../presentation/auth/otp_verify_screen.dart';
+import '../../presentation/home_setup/create_home_screen.dart';
 import '../../presentation/shell/main_shell.dart';
 import '../../presentation/dashboard/dashboard_screen.dart';
 import '../../presentation/device_config/device_config_screen.dart';
@@ -16,12 +18,11 @@ import '../../presentation/automation/scene_editor.dart';
 import '../../presentation/automation/scheduler_screen.dart';
 import '../../presentation/automation/agent_chat_screen.dart';
 import '../../presentation/settings/settings_screen.dart';
-import '../../presentation/settings/floor_room_manager.dart';
 import '../../presentation/settings/home_sharing_screen.dart';
 import '../../presentation/settings/permission_matrix_screen.dart';
 import '../../presentation/settings/profile_screen.dart';
 import '../../presentation/settings/webview_screen.dart';
-
+import '../../presentation/settings/legal_screen.dart';
 
 import 'dart:async';
 
@@ -51,21 +52,38 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: listenable,
-    redirect: (context, state) {
+    redirect: (context, state) async {
       final authState = ref.read(authControllerProvider);
-      final isOnSplash = state.matchedLocation == '/splash';
-      final isOnAuth = state.matchedLocation.startsWith('/login') ||
-          state.matchedLocation.startsWith('/otp-verify');
+      final location = state.matchedLocation;
 
-      if (isOnSplash) return null;
+      final isOnSplash = location == '/splash';
+      final isPublicRoute = location == '/login' ||
+                           location == '/otp-verify' ||
+                           location == '/legal' ||
+                           location == '/webview';
+      final isCreateHome = location == '/create-home';
 
-      if (authState.status == AuthStatus.initial ||
-          authState.status == AuthStatus.loading) {
-        return null;
+      // 1. Wait for Auth Initialization (splash stays until 5s boot + check done)
+      if (!authState.isInitialized) {
+        return isOnSplash ? null : '/splash';
       }
 
-      if (authState.isAuthenticated && isOnAuth) return '/dashboard';
-      if (!authState.isAuthenticated && !isOnAuth) return '/login';
+      // 2. Auth resolved
+      if (authState.isAuthenticated) {
+        // Don't allow auth/splash routes when logged in
+        if (isOnSplash || location == '/login' || location == '/otp-verify') {
+          // Check if user has a home
+          final hasHome = await ref.read(hasHomeProvider.future);
+          return hasHome ? '/dashboard' : '/create-home';
+        }
+        // Logged-in user trying to access /create-home is fine
+        return null;
+      } else {
+        // Logged-out: only allow public routes
+        if (isCreateHome) return '/login';
+        if (!isPublicRoute && !isOnSplash) return '/login';
+        if (isOnSplash) return '/login';
+      }
 
       return null;
     },
@@ -91,6 +109,34 @@ final routerProvider = Provider<GoRouter>((ref) {
             purpose: extra['purpose'] as String? ?? 'reset_password',
             name: extra['name'] as String?,
           );
+        },
+      ),
+
+      // Create Home (post-login onboarding)
+      GoRoute(
+        path: '/create-home',
+        builder: (context, state) => const CreateHomeScreen(),
+      ),
+
+      // Global WebView Route
+      GoRoute(
+        path: '/webview',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return WebViewScreen(
+            url: extra['url'] as String? ?? 'https://neurotouch.in',
+            title: extra['title'] as String? ?? 'Neuro Touch',
+          );
+        },
+      ),
+
+      // In-app Legal Screens
+      GoRoute(
+        path: '/legal',
+        builder: (context, state) {
+          final typeStr = state.uri.queryParameters['type'] ?? 'terms';
+          final type = typeStr == 'privacy' ? LegalType.privacy : LegalType.terms;
+          return LegalScreen(type: type);
         },
       ),
 
@@ -198,10 +244,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const SettingsScreen(),
                 routes: [
                   GoRoute(
-                    path: 'floors-rooms',
-                    builder: (context, state) => const FloorRoomManagerScreen(),
-                  ),
-                  GoRoute(
                     path: 'home-sharing',
                     builder: (context, state) => const HomeSharingScreen(),
                   ),
@@ -214,17 +256,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'profile',
                     builder: (context, state) => const ProfileScreen(),
-                  ),
-                  GoRoute(
-                    path: 'webview',
-                    builder: (context, state) {
-                      final extra =
-                          state.extra as Map<String, dynamic>? ?? {};
-                      return WebViewScreen(
-                        url: extra['url'] as String? ?? 'https://neurotouch.in',
-                        title: extra['title'] as String? ?? 'Neuro Touch',
-                      );
-                    },
                   ),
                 ],
               ),

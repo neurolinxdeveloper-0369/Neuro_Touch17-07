@@ -1,22 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/auth.controller.dart';
 import '../../app.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_typography.dart';
 import '../../core/utils/extensions.dart';
 import '../../data/services/storage_service.dart';
-
-const Color _primary = Color(0xFF06457F);
-const Color _darkBg = Color(0xFF000000);
-const Color _cardDark = Color(0xFF06457F);
-const Color _darkTextPrimary = Color(0xFFFFFFFF);
-const Color _darkTextSecondary = Color(0xFFFFFFFF);
-const Color _lightTextPrimary = Color(0xFF06457F);
-const Color _lightTextSecondary = Color(0xFF06457F);
-const Color _borderDark = Color(0xFF06457F);
-const Color _borderLight = Color(0xFF06457F);
-const Color _error = Color(0xFFFFFFFF);
+import '../common/widgets/app_screen_wrapper.dart';
+import '../common/widgets/glass_panel.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -26,245 +18,58 @@ class SettingsScreen extends ConsumerWidget {
     final isDark = context.isDark;
     final user = ref.watch(currentUserProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final bgColor = isDark ? _darkBg : const Color(0xFFF2F3F5);
-    final appBarColor = isDark ? _darkBg : const Color(0xFF194B85);
-    final textPrimary = isDark ? _darkTextPrimary : _lightTextPrimary;
-    final textSecondary = isDark ? _darkTextSecondary : _lightTextSecondary;
 
-
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: true,
-            snap: true,
-            backgroundColor: appBarColor,
-            elevation: 0,
-            title: Text('Settings',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.white)),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // User profile card
-                  GestureDetector(
-                    onTap: () => context.push('/settings/profile'),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF4C6FFF), Color(0xFF6C5CE7)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: Colors.white.withOpacity(0.2),
-                            backgroundImage: (user?.profilePictureUrl != null && user!.profilePictureUrl!.isNotEmpty)
-                                ? NetworkImage(user.profilePictureUrl!)
-                                : null,
-                            child: (user?.profilePictureUrl == null || user!.profilePictureUrl!.isEmpty)
-                                ? Text(
-                                    user?.name.initials ?? '?',
-                                    style: GoogleFonts.inter(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user?.name ?? 'Guest',
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  user?.contactDisplay ?? '',
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.chevron_right_rounded,
-                              color: Colors.white),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Home Management
-                  _SettingsSection(
-                    title: 'Home Management',
-                    isDark: isDark,
-                    children: [
-                      _SettingsTile(
-                        icon: Icons.layers_outlined,
-                        label: 'Floors & Rooms',
-                        isDark: isDark,
-                        onTap: () => context.push('/settings/floors-rooms'),
-                      ),
-                      _SettingsTile(
-                        icon: Icons.people_outline_rounded,
-                        label: 'Home Sharing',
-                        isDark: isDark,
-                        onTap: () => context.push('/settings/home-sharing'),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Appearance
-                  _SettingsSection(
-                    title: 'Appearance',
-                    isDark: isDark,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: _primary.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(Icons.palette_outlined,
-                                  color: _primary, size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Theme',
-                                style: GoogleFonts.inter(
-                                  color: textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            DropdownButton<ThemeMode>(
-                              value: themeMode,
-                              underline: const SizedBox.shrink(),
-                              style: GoogleFonts.inter(
-                                  color: isDark ? _darkTextPrimary : Colors.white, fontSize: 14),
-                              dropdownColor: isDark ? _cardDark : const Color(0xFF194B85),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: ThemeMode.system,
-                                  child: Text('System'),
-                                ),
-                                DropdownMenuItem(
-                                  value: ThemeMode.light,
-                                  child: Text('Light'),
-                                ),
-                                DropdownMenuItem(
-                                  value: ThemeMode.dark,
-                                  child: Text('Dark'),
-                                ),
-                              ],
-                              onChanged: (mode) {
-                                if (mode == null) return;
-                                ref.read(themeModeProvider.notifier).state =
-                                    mode;
-                                ref
-                                    .read(storageServiceProvider)
-                                    .saveThemeMode(mode);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Support
-                  _SettingsSection(
-                    title: 'Support',
-                    isDark: isDark,
-                    children: [
-                      _SettingsTile(
-                        icon: Icons.description_outlined,
-                        label: 'Privacy Policy',
-                        isDark: isDark,
-                        onTap: () => context.push('/settings/webview', extra: {
-                          'url': 'https://neurotouch.in/privacy',
-                          'title': 'Privacy Policy',
-                        }),
-                      ),
-                      _SettingsTile(
-                        icon: Icons.article_outlined,
-                        label: 'Terms of Service',
-                        isDark: isDark,
-                        onTap: () => context.push('/settings/webview', extra: {
-                          'url': 'https://neurotouch.in/terms',
-                          'title': 'Terms of Service',
-                        }),
-                      ),
-                      _SettingsTile(
-                        icon: Icons.info_outline_rounded,
-                        label: 'About Neuro Touch',
-                        isDark: isDark,
-                        onTap: () {},
-                        trailing: Text(
-                          'v1.0.0',
-                          style: GoogleFonts.inter(
-                              color: textSecondary, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Sign out
-                  _SettingsSection(
-                    title: '',
-                    isDark: isDark,
-                    children: [
-                      _SettingsTile(
-                        icon: Icons.logout_rounded,
-                        label: 'Sign Out',
-                        labelColor: _error,
-                        isDark: isDark,
-                        onTap: () => _showLogoutDialog(context, ref),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 100),
-                ],
-              ),
+    return AppScreenWrapper(
+      title: 'Settings',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Column(
+          children: [
+            _ProfileSummaryCard(user: user),
+            const SizedBox(height: 32),
+            _SettingsSection(
+              title: 'Home',
+              children: [
+                _SettingsTile(icon: Icons.people_outline_rounded, label: 'Home Sharing', onTap: () => context.push('/settings/home-sharing')),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            _SettingsSection(
+              title: 'Appearance',
+              children: [
+                _ThemeSelector(
+                  currentMode: themeMode,
+                  onChanged: (mode) {
+                    ref.read(themeModeProvider.notifier).state = mode;
+                    ref.read(storageServiceProvider).saveThemeMode(mode);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _SettingsSection(
+              title: 'Support',
+              children: [
+                _SettingsTile(icon: Icons.privacy_tip_outlined, label: 'Privacy Policy', onTap: () => context.push('/legal?type=privacy')),
+                _SettingsTile(icon: Icons.description_outlined, label: 'Terms of Use', onTap: () => context.push('/legal?type=terms')),
+                _SettingsTile(icon: Icons.info_outline_rounded, label: 'About', onTap: () {}, trailing: const Text('v1.1.0')),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _SettingsSection(
+              title: '',
+              children: [
+                _SettingsTile(
+                  icon: Icons.logout_rounded,
+                  label: 'Sign Out',
+                  color: AppColors.error,
+                  onTap: () => _showLogoutDialog(context, ref),
+                ),
+              ],
+            ),
+            const SizedBox(height: 120),
+          ],
+        ),
       ),
     );
   }
@@ -272,25 +77,64 @@ class SettingsScreen extends ConsumerWidget {
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+        content: const Text('Are you sure you want to sign out from Neuro Touch?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context, rootNavigator: true).pop();
-              WidgetsBinding.instance.addPostFrameCallback((_) {
+              // 1. Close the dialog first
+              Navigator.of(dialogContext).pop();
+              // 2. Schedule logout to avoid collision with Navigator animations
+              Future.delayed(const Duration(milliseconds: 100), () {
                 ref.read(authControllerProvider.notifier).logout();
               });
             },
-            child: const Text('Sign Out',
-                style: TextStyle(color: _error)),
+            child: const Text('Sign Out', style: TextStyle(color: AppColors.error)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ProfileSummaryCard extends StatelessWidget {
+  final dynamic user;
+  const _ProfileSummaryCard({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    return GestureDetector(
+      onTap: () => context.push('/settings/profile'),
+      child: GlassPanel(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 32,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              backgroundImage: user?.profilePictureUrl != null ? NetworkImage(user.profilePictureUrl) : null,
+              child: user?.profilePictureUrl == null ? Text(user?.name.initials ?? '?', style: AppTypography.h3.copyWith(color: AppColors.primary)) : null,
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(user?.name ?? 'Guest User', style: AppTypography.h3),
+                  Text(user?.contactDisplay ?? 'No contact info', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(isDark))),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary(isDark)),
+          ],
+        ),
       ),
     );
   }
@@ -299,48 +143,23 @@ class SettingsScreen extends ConsumerWidget {
 class _SettingsSection extends StatelessWidget {
   final String title;
   final List<Widget> children;
-  final bool isDark;
 
-  const _SettingsSection({
-    required this.title,
-    required this.children,
-    required this.isDark,
-  });
+  const _SettingsSection({required this.title, required this.children});
 
   @override
   Widget build(BuildContext context) {
-    final textSecondary = isDark ? _darkTextSecondary : _lightTextSecondary;
-    final cardColor = isDark ? _cardDark : const Color(0xFF194B85);
-
+    final isDark = context.isDark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (title.isNotEmpty) ...[
+        if (title.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 8),
-            child: Text(
-              title.toUpperCase(),
-              style: GoogleFonts.inter(
-                color: textSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.8,
-              ),
-            ),
+            child: Text(title.toUpperCase(), style: AppTypography.label.copyWith(color: AppColors.textSecondary(isDark))),
           ),
-        ],
-        Container(
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isDark ? _borderDark : _borderLight,
-              width: 0.5,
-            ),
-          ),
-          child: Column(
-            children: children,
-          ),
+        GlassPanel(
+          padding: EdgeInsets.zero,
+          child: Column(children: children),
         ),
       ],
     );
@@ -350,58 +169,44 @@ class _SettingsSection extends StatelessWidget {
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color? labelColor;
-  final bool isDark;
   final VoidCallback onTap;
+  final Color? color;
   final Widget? trailing;
 
-  const _SettingsTile({
-    required this.icon,
-    required this.label,
-    this.labelColor,
-    required this.isDark,
-    required this.onTap,
-    this.trailing,
-  });
+  const _SettingsTile({required this.icon, required this.label, required this.onTap, this.color, this.trailing});
 
   @override
   Widget build(BuildContext context) {
-    final textPrimary = isDark ? _darkTextPrimary : Colors.white;
-    final textSecondary = isDark ? _darkTextSecondary : Colors.white70;
-    final finalIconColor = isDark ? _primary : Colors.white;
-
-    return GestureDetector(
+    final isDark = context.isDark;
+    return ListTile(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: finalIconColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: finalIconColor, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: GoogleFonts.inter(
-                  color: labelColor ?? textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            trailing ??
-                Icon(Icons.chevron_right_rounded,
-                    color: textSecondary, size: 18),
-          ],
-        ),
+      leading: Icon(icon, color: color ?? AppColors.primary, size: 24),
+      title: Text(label, style: AppTypography.bodyLarge.copyWith(color: color ?? AppColors.textPrimary(isDark), fontWeight: FontWeight.w500)),
+      trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary(isDark), size: 20),
+    );
+  }
+}
+
+class _ThemeSelector extends StatelessWidget {
+  final ThemeMode currentMode;
+  final ValueChanged<ThemeMode> onChanged;
+
+  const _ThemeSelector({required this.currentMode, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.palette_outlined, color: AppColors.primary),
+      title: Text('Theme', style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
+      trailing: DropdownButton<ThemeMode>(
+        value: currentMode,
+        underline: const SizedBox.shrink(),
+        items: const [
+          DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
+          DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+          DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+        ],
+        onChanged: (v) => v != null ? onChanged(v) : null,
       ),
     );
   }

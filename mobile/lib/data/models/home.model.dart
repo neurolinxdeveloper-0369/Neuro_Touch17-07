@@ -71,6 +71,10 @@ class HomeModel extends Equatable {
   final String id;
   final String name;
   final String ownerId;
+  final String homeType;     // flat | villa | building | office
+  final int floorCount;      // 0 for flat, user-entered for others
+  final String? networkSsid;
+  final String? networkPassword;
   final String? inviteCode;
   final List<HomeMemberModel> members;
   final DateTime createdAt;
@@ -79,6 +83,10 @@ class HomeModel extends Equatable {
     required this.id,
     required this.name,
     required this.ownerId,
+    this.homeType = 'flat',
+    this.floorCount = 0,
+    this.networkSsid,
+    this.networkPassword,
     this.inviteCode,
     this.members = const [],
     required this.createdAt,
@@ -89,6 +97,10 @@ class HomeModel extends Equatable {
       id: json['id'] as String,
       name: json['name'] as String? ?? '',
       ownerId: json['owner_id'] as String? ?? '',
+      homeType: json['home_type'] as String? ?? 'flat',
+      floorCount: json['floor_count'] as int? ?? 0,
+      networkSsid: json['network_ssid'] as String?,
+      networkPassword: json['network_password'] as String?,
       inviteCode: json['invite_code'] as String?,
       members: (json['members'] as List<dynamic>? ?? [])
           .map((m) => HomeMemberModel.fromJson(m as Map<String, dynamic>))
@@ -103,6 +115,10 @@ class HomeModel extends Equatable {
         'id': id,
         'name': name,
         'owner_id': ownerId,
+        'home_type': homeType,
+        'floor_count': floorCount,
+        'network_ssid': networkSsid,
+        'network_password': networkPassword,
         'invite_code': inviteCode,
         'members': members.map((m) => m.toJson()).toList(),
         'created_at': createdAt.toIso8601String(),
@@ -112,6 +128,10 @@ class HomeModel extends Equatable {
     String? id,
     String? name,
     String? ownerId,
+    String? homeType,
+    int? floorCount,
+    String? networkSsid,
+    String? networkPassword,
     String? inviteCode,
     List<HomeMemberModel>? members,
     DateTime? createdAt,
@@ -120,11 +140,30 @@ class HomeModel extends Equatable {
         id: id ?? this.id,
         name: name ?? this.name,
         ownerId: ownerId ?? this.ownerId,
+        homeType: homeType ?? this.homeType,
+        floorCount: floorCount ?? this.floorCount,
+        networkSsid: networkSsid ?? this.networkSsid,
+        networkPassword: networkPassword ?? this.networkPassword,
         inviteCode: inviteCode ?? this.inviteCode,
         members: members ?? this.members,
         createdAt: createdAt ?? this.createdAt,
       );
 
+  /// Display label for home type
+  String get homeTypeLabel {
+    switch (homeType) {
+      case 'villa': return 'Villa';
+      case 'building': return 'Building';
+      case 'office': return 'Office';
+      case 'flat':
+      default: return 'Flat';
+    }
+  }
+
+  /// Whether this home type supports multiple floors
+  bool get hasFloors => homeType != 'flat';
+
   @override
-  List<Object?> get props => [id, name, ownerId, inviteCode, members, createdAt];
+  List<Object?> get props =>
+      [id, name, ownerId, homeType, floorCount, networkSsid, inviteCode, members, createdAt];
 }

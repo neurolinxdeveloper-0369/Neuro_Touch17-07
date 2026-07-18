@@ -169,7 +169,6 @@ class SwitchConfigModel extends Equatable {
 class DeviceModel extends Equatable {
   final String id;
   final String homeId;
-  final String? roomId;
   final DeviceType deviceType;
   final String name;
   final String? ssidPattern;
@@ -183,7 +182,6 @@ class DeviceModel extends Equatable {
   const DeviceModel({
     required this.id,
     required this.homeId,
-    this.roomId,
     required this.deviceType,
     required this.name,
     this.ssidPattern,
@@ -198,7 +196,6 @@ class DeviceModel extends Equatable {
   factory DeviceModel.fromJson(Map<String, dynamic> json) => DeviceModel(
         id: json['id'] as String,
         homeId: json['home_id'] as String? ?? '',
-        roomId: json['room_id'] as String?,
         deviceType:
             DeviceTypeExtension.fromString(json['device_type'] as String? ?? ''),
         name: json['name'] as String? ?? '',
@@ -218,7 +215,6 @@ class DeviceModel extends Equatable {
   Map<String, dynamic> toJson() => {
         'id': id,
         'home_id': homeId,
-        'room_id': roomId,
         'device_type': deviceType.apiValue,
         'name': name,
         'ssid_pattern': ssidPattern,
@@ -233,7 +229,6 @@ class DeviceModel extends Equatable {
   DeviceModel copyWith({
     String? id,
     String? homeId,
-    String? roomId,
     DeviceType? deviceType,
     String? name,
     String? ssidPattern,
@@ -247,7 +242,6 @@ class DeviceModel extends Equatable {
       DeviceModel(
         id: id ?? this.id,
         homeId: homeId ?? this.homeId,
-        roomId: roomId ?? this.roomId,
         deviceType: deviceType ?? this.deviceType,
         name: name ?? this.name,
         ssidPattern: ssidPattern ?? this.ssidPattern,
@@ -261,7 +255,7 @@ class DeviceModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id, homeId, roomId, deviceType, name, ssidPattern,
+        id, homeId, deviceType, name, ssidPattern,
         firmwareVersion, isOnline, lastSeen, switchCount, config
       ];
 }

@@ -82,7 +82,6 @@ func GetDevice(c *fiber.Ctx) error {
 // UpdateDevice
 type UpdateDeviceInput struct {
 	Name   string                 `json:"name"`
-	RoomID *string                `json:"room_id"`
 	Config map[string]interface{} `json:"config"`
 }
 
@@ -110,21 +109,6 @@ func UpdateDevice(c *fiber.Ctx) error {
 		device.Name = input.Name
 	}
 
-	if input.RoomID != nil {
-		if *input.RoomID == "" {
-			device.RoomID = nil
-		} else {
-			// Verify room exists in same home
-			var room models.Room
-			if err := config.AppConfig.DB.First(&room, "id = ? AND home_id = ?", *input.RoomID, device.HomeID).Error; err != nil {
-				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-					"success": false,
-					"error":   "Room does not exist in this home",
-				})
-			}
-			device.RoomID = input.RoomID
-		}
-	}
 
 	if len(input.Config) > 0 {
 		configBytes, _ := json.Marshal(input.Config)

@@ -27,8 +27,6 @@ func main() {
 		&models.OTPVerification{},
 		&models.Home{},
 		&models.HomeMember{},
-		&models.Floor{},
-		&models.Room{},
 		&models.Device{},
 		&models.SwitchConfig{},
 		&models.Automation{},
