@@ -46,22 +46,21 @@ func CheckProvisionStatus(c *fiber.Ctx) error {
 type ProvisionDeviceInput struct {
 	DeviceID    string `json:"device_id"`
 	HomeID      string `json:"home_id"`
-	RoomID      string `json:"room_id"`
 	DeviceType  string `json:"device_type"`
 	Name        string `json:"name"`
 	SSIDPattern string `json:"ssid_pattern"`
 	SwitchCount int    `json:"switch_count"`
 }
 
-// ProvisionDeviceEndpoint maps the device to its home/room in DB
+// ProvisionDeviceEndpoint maps the device to its home in DB
 func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(string)
 
 	var input ProvisionDeviceInput
-	if err := c.BodyParser(&input); err != nil || input.DeviceID == "" || input.HomeID == "" || input.RoomID == "" {
+	if err := c.BodyParser(&input); err != nil || input.DeviceID == "" || input.HomeID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error":   "Device ID, Home ID, and Room ID are required",
+			"error":   "Device ID and Home ID are required",
 		})
 	}
 
@@ -70,15 +69,6 @@ func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"success": false,
 			"error":   "Admin permissions required to provision devices",
-		})
-	}
-
-	// Verify room exists in this home
-	var room models.Room
-	if err := config.AppConfig.DB.First(&room, "id = ? AND home_id = ?", input.RoomID, input.HomeID).Error; err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"error":   "Selected room does not exist in this home",
 		})
 	}
 
@@ -95,7 +85,6 @@ func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 		device = models.Device{
 			ID:          input.DeviceID,
 			HomeID:      input.HomeID,
-			RoomID:      &input.RoomID,
 			DeviceType:  input.DeviceType,
 			Name:        input.Name,
 			SSIDPattern: &input.SSIDPattern,
@@ -112,9 +101,8 @@ func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 			})
 		}
 	} else {
-		// Device already existed, re-assign
+		// Device already existed, re-assign to home
 		device.HomeID = input.HomeID
-		device.RoomID = &input.RoomID
 		device.Name = input.Name
 		device.DeviceType = input.DeviceType
 		device.SwitchCount = input.SwitchCount
