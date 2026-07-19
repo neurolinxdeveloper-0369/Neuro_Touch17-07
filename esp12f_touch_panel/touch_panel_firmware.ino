@@ -46,14 +46,18 @@
 // ─── Configuration ────────────────────────────────────────────────────────────
 
 // ⚠️ Change this to 6, 7, or 8 before flashing each panel variant
-#define PANEL_NUMBER 6
+#define PANEL_NUMBER 8
+
+// Stringify helpers — needed to turn PANEL_NUMBER (an int macro) into a string
+#define STRINGIFY(x) #x
+#define TOSTRING(x)  STRINGIFY(x)
 
 // Backend server (the Go API) — update to your server's public IP/domain
-#define BACKEND_HOST "http://192.168.1.100:8080"
+#define BACKEND_HOST           "http://129.121.12.144:8082"
 #define BACKEND_PROVISION_PATH "/api/v1/provision/mac-confirm"
 
-// AP Credentials — SSID suffix matches panel number
-#define AP_SSID "Rollin_Lift_Panel_" #PANEL_NUMBER
+// AP Credentials — SSID suffix matches panel number (e.g. Rollin_Lift_Panel_8)
+#define AP_SSID     "Rollin_Lift_Panel_" TOSTRING(PANEL_NUMBER)
 #define AP_PASSWORD ""           // Open hotspot (no password)
 #define AP_CHANNEL 6
 #define AP_IP_ADDR 192, 168, 0, 4
