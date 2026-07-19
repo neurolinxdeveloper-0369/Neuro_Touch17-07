@@ -9,6 +9,11 @@ extension BuildContextExtensions on BuildContext {
   TextTheme get textTheme => Theme.of(this).textTheme;
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
   EdgeInsets get padding => MediaQuery.paddingOf(this);
+  bool get isLandscape => MediaQuery.orientationOf(this) == Orientation.landscape;
+
+  bool get isMobile => screenWidth < 600;
+  bool get isTablet => screenWidth >= 600 && screenWidth < 1200;
+  bool get isDesktop => screenWidth >= 1200;
 
   void showSnackBar(String message, {Color? backgroundColor, IconData? icon}) {
     ScaffoldMessenger.of(this).hideCurrentSnackBar();
@@ -24,7 +29,7 @@ extension BuildContextExtensions on BuildContext {
           ],
         ),
         backgroundColor: backgroundColor ??
-            (isDark ? AppColors.cardDark : Colors.grey[900]),
+            (isDark ? AppColors.cardBackground(true) : Colors.grey[900]),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),

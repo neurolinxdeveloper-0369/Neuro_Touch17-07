@@ -1,35 +1,27 @@
-# Implementation Plan - Actual OTP Sending via SMS Gateway
+# Implementation Plan - Set Dashboard Icons to White
 
-The current system only simulates OTP sending by logging to the console. This plan will integrate a real SMS gateway to send OTPs to users' mobile phones.
+The user wants the icons in the dashboard to be displayed in white by default. Currently, some icons use brand colors (like blue or green) in dark mode, which results in low contrast against the dark blue card backgrounds.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> You will need an account with an SMS service provider (like Twilio, Fast2SMS, etc.) and their API credentials to make this work.
->
-> Please let me know if you have a preferred provider. I will use **Twilio** as a default placeholder in this plan.
+> [!NOTE]
+> This change will make all primary icons in the dashboard cards (Rooms, Devices, Summary) white in both light and dark modes, as the cards themselves are dark blue in both modes.
 
 ## Proposed Changes
 
-### [Backend Configuration]
+### [Dashboard UI]
 
-#### [MODIFY] [config.go](file:///B:/IoT_Neuro Touch/IoT_Neuro Touch/backend/config/config.go)
-- Add `SmsAccountSid`, `SmsAuthToken`, and `SmsFromNumber` (or equivalent for your provider) to the `Config` struct.
-- Load these values from environment variables in `LoadConfig()`.
-
-#### [MODIFY] [.env.example](file:///B:/IoT_Neuro Touch/IoT_Neuro Touch/.env.example)
-- Add placeholders for the new SMS configuration variables.
-
-### [Auth Controller]
-
-#### [MODIFY] [auth_controller.go](file:///B:/IoT_Neuro Touch/IoT_Neuro Touch/backend/controllers/auth_controller.go)
-- Implement a helper function `sendSMS(to, message)` that makes an HTTP POST request to the SMS provider's API.
-- Update the `SendOTP` function to call `sendSMS` instead of just logging to the console.
+#### [MODIFY] [dashboard_screen.dart](file:///B:/IoT_Neuro Touch/IoT_Neuro Touch/mobile/lib/presentation/dashboard/dashboard_screen.dart)
+- Update `_SummaryCard` to always use `Colors.white` for icons.
+- Update `_RoomCard` to always use `Colors.white` for icons.
+- Update `_DeviceListItem` to always use `Colors.white` for icons.
+- Ensure all icons inside cards have consistent white color regardless of the theme mode.
 
 ## Verification Plan
 
 ### Manual Verification
-1. Start the backend with valid SMS credentials in `.env`.
-2. Trigger the `SendOTP` endpoint from the mobile app or via Postman.
-3. Verify that an SMS is received on the target phone number.
-4. Check backend logs for any API errors from the SMS provider.
+1. Open the dashboard in the mobile app.
+2. Verify that icons in "Online", "Total Load", and "Automations" cards are white.
+3. Verify that icons in "Rooms" cards are white.
+4. Verify that icons in "Devices" list are white.
+5. Switch between Dark and Light modes and ensure icons remain white and legible.

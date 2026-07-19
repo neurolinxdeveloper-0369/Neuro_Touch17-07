@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../controllers/dashboard.controller.dart';
 import '../../controllers/mqtt.controller.dart';
 import '../../controllers/auth.controller.dart';
+import '../../controllers/home_setup.controller.dart';
 import '../../data/models/device.model.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -55,7 +56,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   const SizedBox(height: 24),
-                  _SummarySection(onlineCount: onlineCount, totalWatts: totalWatts),
+                  _RunningHoursSection(dashState: dashState, totalWatts: totalWatts),
                   const SizedBox(height: 32),
                   AppSectionHeader(
                     title: 'Active Devices',
@@ -76,52 +77,114 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 }
 
-class _DashboardAppBar extends StatelessWidget {
+class _DashboardAppBar extends ConsumerWidget {
   final dynamic user;
   const _DashboardAppBar({required this.user});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = context.isDark;
+    final homesAsync = ref.watch(userHomesProvider);
+    final selectedHomeId = ref.watch(homeIdProvider);
+    
     return SliverAppBar(
-      expandedHeight: 120,
-      collapsedHeight: 80,
+      expandedHeight: 90,
+      collapsedHeight: 75,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
         background: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  backgroundImage: user?.profilePictureUrl != null ? NetworkImage(user.profilePictureUrl) : null,
-                  child: user?.profilePictureUrl == null
-                      ? Text(user?.name.initials ?? '?', style: AppTypography.h3.copyWith(color: AppColors.primary))
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(DateTime.now().greeting, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(isDark))),
-                      Text(user?.name.split(' ').first ?? 'Home', style: AppTypography.h2),
-                    ],
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: GlassPanel(
+              color: isDark ? null : AppColors.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              borderRadius: BorderRadius.circular(40),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: isDark ? AppColors.primary.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.2),
+                    backgroundImage: user?.profilePictureUrl != null ? NetworkImage(user.profilePictureUrl) : null,
+                    child: user?.profilePictureUrl == null
+                        ? Text(user?.name.initials ?? '?', style: AppTypography.h3.copyWith(color: isDark ? AppColors.primary : Colors.white))
+                        : null,
                   ),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: GlassPanel(
-                    width: 44,
-                    height: 44,
-                    borderRadius: BorderRadius.circular(12),
-                    child: const Icon(Icons.notifications_none_rounded),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(DateTime.now().greeting, style: AppTypography.bodySmall.copyWith(color: isDark ? AppColors.textSecondary(isDark) : Colors.white70)),
+                        Text(user?.name.split(' ').first ?? 'Home', style: AppTypography.h2.copyWith(color: isDark ? null : Colors.white)),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  homesAsync.when(
+                    data: (homes) {
+                      if (homes.isEmpty) return const SizedBox();
+                      if (homes.length == 1) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Text(
+                            homes.first.name,
+                            style: AppTypography.titleMedium.copyWith(color: isDark ? null : Colors.white),
+                          ),
+                        );
+                      }
+                      
+                      final selectedHome = homes.firstWhere(
+                        (h) => h.id == selectedHomeId, 
+                        orElse: () => homes.first,
+                      );
+                      
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.primary.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: selectedHome.id,
+                            icon: const Icon(
+                              Icons.keyboard_arrow_down_rounded, 
+                              size: 18, 
+                              color: Colors.white,
+                            ),
+                            isDense: true,
+                            borderRadius: BorderRadius.circular(12),
+                            dropdownColor: AppColors.scaffoldBackground(isDark),
+                            items: homes.map((home) {
+                              return DropdownMenuItem<String>(
+                                value: home.id,
+                                child: Text(
+                                  home.name, 
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: isDark ? AppColors.textPrimary(isDark) : Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (newId) {
+                              if (newId != null && newId != selectedHomeId) {
+                                ref.read(homeIdProvider.notifier).state = newId;
+                                ref.read(dashboardControllerProvider.notifier).loadDashboard(newId);
+                              }
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () => const Padding(
+                      padding: EdgeInsets.only(right: 12.0),
+                      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
+                    error: (_, __) => const SizedBox(),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -130,49 +193,206 @@ class _DashboardAppBar extends StatelessWidget {
   }
 }
 
-class _SummarySection extends StatelessWidget {
-  final int onlineCount;
+class _RunningHoursSection extends StatefulWidget {
+  final dynamic dashState;
   final double totalWatts;
-
-  const _SummarySection({required this.onlineCount, required this.totalWatts});
+  const _RunningHoursSection({required this.dashState, required this.totalWatts});
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _SummaryCard(label: 'Online', value: '$onlineCount', icon: Icons.wifi_tethering_rounded, color: AppColors.success),
-        const SizedBox(width: 12),
-        _SummaryCard(label: 'Usage', value: totalWatts.toWattsString, icon: Icons.electric_bolt_rounded, color: AppColors.warning),
-        const SizedBox(width: 12),
-        _SummaryCard(label: 'Auto', value: '12', icon: Icons.auto_awesome_rounded, color: AppColors.primaryLight),
-      ],
-    );
-  }
+  State<_RunningHoursSection> createState() => _RunningHoursSectionState();
 }
 
-class _SummaryCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
+class _RunningHoursSectionState extends State<_RunningHoursSection> {
+  final List<String> _rooms = []; 
+  String? _selectedRoom;
+  String? _selectedDeviceId;
 
-  const _SummaryCard({required this.label, required this.value, required this.icon, required this.color});
+  @override
+  void initState() {
+    super.initState();
+    _initializeDefaultDevice();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RunningHoursSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_selectedDeviceId == null) {
+      _initializeDefaultDevice();
+    }
+  }
+
+  void _initializeDefaultDevice() {
+    if (widget.dashState.devices.isNotEmpty) {
+      _selectedDeviceId = widget.dashState.devices.first.id;
+    }
+  }
+
+  int _getMockRunningHours(String? deviceId, String? roomName) {
+    if (deviceId == null) return 0;
+    return ((deviceId.hashCode ^ (roomName?.hashCode ?? 0)).abs() % 500) + 24;
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    return Expanded(
+    final availableDevices = widget.dashState.devices as List<dynamic>;
+    
+    if (availableDevices.isNotEmpty && !availableDevices.any((d) => d.id == _selectedDeviceId)) {
+      _selectedDeviceId = availableDevices.first.id;
+    }
+
+    final hours = _getMockRunningHours(_selectedDeviceId, _selectedRoom);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
       child: GlassPanel(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 12),
-            Text(value, style: AppTypography.h3),
-            Text(label, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(isDark))),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total Running Hours', style: AppTypography.titleMedium.copyWith(color: AppColors.textPrimary(isDark))),
+                Icon(Icons.query_stats_rounded, color: AppColors.textSecondary(isDark), size: 20),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _rooms.isEmpty
+                      ? _buildDropdown(
+                          value: 'No Rooms',
+                          items: ['No Rooms'],
+                          onChanged: null,
+                          icon: Icons.meeting_room_rounded,
+                          isDark: isDark,
+                        )
+                      : _buildDropdown(
+                          value: _selectedRoom,
+                          items: _rooms,
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedRoom = val);
+                          },
+                          icon: Icons.meeting_room_rounded,
+                          isDark: isDark,
+                        ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: availableDevices.isEmpty
+                      ? _buildDropdown(
+                          value: 'No Devices',
+                          items: ['No Devices'],
+                          onChanged: null,
+                          icon: Icons.devices_rounded,
+                          isDark: isDark,
+                        )
+                      : _buildDropdown(
+                          value: _selectedDeviceId,
+                          items: availableDevices.map((d) => d.id.toString()).toList(),
+                          labels: availableDevices.map((d) => d.name.toString()).toList(),
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedDeviceId = val);
+                          },
+                          icon: Icons.devices_rounded,
+                          isDark: isDark,
+                        ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '$hours',
+                          style: AppTypography.h1.copyWith(
+                            color: AppColors.primary,
+                            fontSize: 48,
+                            height: 1,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text('hrs', style: AppTypography.titleMedium.copyWith(color: AppColors.textSecondary(isDark))),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.electric_bolt_rounded, size: 16, color: AppColors.warning),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${widget.totalWatts.toWattsString} Usage', 
+                          style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary(isDark), fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Icon(Icons.schedule_rounded, color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.primary.withValues(alpha: 0.1), size: 56),
+              ],
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String? value,
+    required List<String> items,
+    List<String>? labels,
+    required void Function(String?)? onChanged,
+    required IconData icon,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.scaffoldBackground(isDark),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderColor(isDark), width: 0.5),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value,
+                isExpanded: true,
+                isDense: false,
+                icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary(isDark), size: 18),
+                dropdownColor: AppColors.scaffoldBackground(isDark),
+                style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary(isDark)),
+                onChanged: onChanged,
+                items: List.generate(items.length, (index) {
+                  return DropdownMenuItem(
+                    value: items[index],
+                    child: Text(
+                      labels != null ? labels[index] : items[index],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

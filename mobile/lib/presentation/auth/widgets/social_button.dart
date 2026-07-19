@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/extensions.dart';
+import '../../common/widgets/glass_panel.dart';
 
 class SocialButton extends StatelessWidget {
   final String label;
   final String? assetPath;
   final IconData? icon;
   final VoidCallback onTap;
-  final bool isDark;
+  final bool isLoading;
 
   const SocialButton({
     super.key,
@@ -15,48 +17,61 @@ class SocialButton extends StatelessWidget {
     this.assetPath,
     this.icon,
     required this.onTap,
-    required this.isDark,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    const bgColor = Color(0xFF06457F);
-    const borderColor = Color(0xFF06457F);
-    const textColor = Colors.white;
+    final isDark = context.isDark;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+    return InkWell(
+      onTap: isLoading ? null : onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: GlassPanel(
         padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor, width: 0.7),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (assetPath != null) ...[
-              Image.asset(assetPath!, width: 20, height: 20,
-                  errorBuilder: (_, __, ___) => Icon(
-                    Icons.g_mobiledata_rounded,
-                    color: textColor,
-                    size: 22,
-                  )),
-            ] else if (icon != null) ...[
-              Icon(icon, color: textColor, size: 22),
-            ],
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                color: textColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+        borderRadius: BorderRadius.circular(16),
+        child: isLoading
+            ? const Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primary,
+                  ),
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (assetPath != null) ...[
+                    Image.asset(
+                      assetPath!,
+                      width: 20,
+                      height: 20,
+                      errorBuilder: (_, __, ___) => Icon(
+                        Icons.account_circle_outlined,
+                        color: AppColors.textPrimary(isDark),
+                        size: 22,
+                      ),
+                    ),
+                  ] else if (icon != null) ...[
+                    Icon(
+                      icon,
+                      color: AppColors.textPrimary(isDark),
+                      size: 22,
+                    ),
+                  ],
+                  const SizedBox(width: 12),
+                  Text(
+                    label,
+                    style: AppTypography.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary(isDark),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

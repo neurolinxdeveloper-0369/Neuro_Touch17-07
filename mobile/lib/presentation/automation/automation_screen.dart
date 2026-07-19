@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_typography.dart';
 import '../../core/utils/extensions.dart';
-
-const Color _primary = Color(0xFF06457F);
-const Color _darkBg = Color(0xFF000000);
-const Color _darkTextPrimary = Color(0xFFFFFFFF);
-const Color _darkTextSecondary = Color(0xFFFFFFFF);
-const Color _lightTextPrimary = Color(0xFF06457F);
-const Color _lightTextSecondary = Color(0xFF06457F);
+import '../common/widgets/app_screen_wrapper.dart';
 
 class AutomationScreen extends ConsumerStatefulWidget {
   const AutomationScreen({super.key});
@@ -37,86 +32,56 @@ class _AutomationScreenState extends ConsumerState<AutomationScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final bgColor = isDark ? _darkBg : Colors.white;
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        title: Text(
-          'Automation',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+    return AppScreenWrapper(
+      title: 'Automation',
+      scrollable: false,
+      actions: [
+        IconButton(
+          onPressed: () => context.push('/automation/chat'),
+          icon: const Icon(Icons.auto_awesome_outlined),
         ),
-        backgroundColor: bgColor,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline_rounded),
-            onPressed: () => context.push('/automation/chat'),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabCtrl,
-          labelColor: _primary,
-          unselectedLabelColor:
-              isDark ? _darkTextSecondary : _lightTextSecondary,
-          indicatorColor: _primary,
-          indicatorWeight: 3,
-          labelStyle:
-              GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
-          unselectedLabelStyle:
-              GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w400),
-          tabs: const [
-            Tab(text: 'Scenes'),
-            Tab(text: 'Schedules'),
-            Tab(text: 'Alerts'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabCtrl,
-        children: [
-          _ScenesTab(isDark: isDark),
-          _SchedulesTab(isDark: isDark),
-          _AlertsTab(isDark: isDark),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/automation/scene/new'),
-        backgroundColor: _primary,
-        child: const Icon(Icons.add_rounded, color: Colors.white),
-      ),
-    );
-  }
-}
+      ],
 
-class _ScenesTab extends StatelessWidget {
-  final bool isDark;
-  const _ScenesTab({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.auto_awesome_rounded,
-              size: 48,
-              color: isDark ? _darkTextSecondary : _lightTextSecondary),
-          const SizedBox(height: 12),
-          Text(
-            'No automations yet',
-            style: GoogleFonts.inter(
-              color: isDark ? _darkTextPrimary : _lightTextPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+          TabBar(
+            controller: _tabCtrl,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textSecondary(isDark),
+            indicatorColor: AppColors.primary,
+            indicatorSize: TabBarIndicatorSize.label,
+            labelStyle: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600),
+            unselectedLabelStyle: AppTypography.bodySmall,
+            tabs: const [
+              Tab(text: 'Scenes'),
+              Tab(text: 'Schedules'),
+              Tab(text: 'Alerts'),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Tap + to create your first scene',
-            style: GoogleFonts.inter(
-              color: isDark ? _darkTextSecondary : _lightTextSecondary,
-              fontSize: 14,
+          Expanded(
+            child: TabBarView(
+              controller: _tabCtrl,
+              children: [
+                _EmptyTab(
+                  icon: Icons.auto_awesome_rounded,
+                  title: 'No scenes yet',
+                  subtitle: 'Create smart scenarios to control multiple devices',
+                  isDark: isDark,
+                ),
+                _EmptyTab(
+                  icon: Icons.schedule_rounded,
+                  title: 'No schedules yet',
+                  subtitle: 'Automate your home based on the time of day',
+                  isDark: isDark,
+                ),
+                _EmptyTab(
+                  icon: Icons.notifications_none_rounded,
+                  title: 'No active alerts',
+                  subtitle: 'Stay notified about your home status',
+                  isDark: isDark,
+                ),
+              ],
             ),
           ),
         ],
@@ -125,64 +90,29 @@ class _ScenesTab extends StatelessWidget {
   }
 }
 
-class _SchedulesTab extends StatelessWidget {
+class _EmptyTab extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
   final bool isDark;
-  const _SchedulesTab({required this.isDark});
+
+  const _EmptyTab({required this.icon, required this.title, required this.subtitle, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.all(48.0),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.schedule_rounded,
-              size: 48,
-              color: isDark ? _darkTextSecondary : _lightTextSecondary),
-          const SizedBox(height: 12),
+          Icon(icon, size: 64, color: AppColors.textSecondary(isDark).withValues(alpha: 0.2)),
+          const SizedBox(height: 24),
+          Text(title, style: AppTypography.h3),
+          const SizedBox(height: 8),
           Text(
-            'No schedules yet',
-            style: GoogleFonts.inter(
-              color: isDark ? _darkTextPrimary : _lightTextPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Schedule devices to turn on/off at specific times',
-            style: GoogleFonts.inter(
-              color: isDark ? _darkTextSecondary : _lightTextSecondary,
-              fontSize: 14,
-            ),
+            subtitle,
             textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AlertsTab extends StatelessWidget {
-  final bool isDark;
-  const _AlertsTab({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.notifications_outlined,
-              size: 48,
-              color: isDark ? _darkTextSecondary : _lightTextSecondary),
-          const SizedBox(height: 12),
-          Text(
-            'No alerts',
-            style: GoogleFonts.inter(
-              color: isDark ? _darkTextPrimary : _lightTextPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary(isDark)),
           ),
         ],
       ),

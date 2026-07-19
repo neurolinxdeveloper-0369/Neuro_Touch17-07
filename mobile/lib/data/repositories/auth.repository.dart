@@ -63,7 +63,7 @@ class AuthRepository {
     await _storage.clearAll();
   }
 
-  UserModel? getCachedUser() => _storage.getUser();
+  Future<UserModel?> getCachedUser() => _storage.getUser();
 
   Future<bool> isLoggedIn() async {
     final token = await _storage.getAccessToken();

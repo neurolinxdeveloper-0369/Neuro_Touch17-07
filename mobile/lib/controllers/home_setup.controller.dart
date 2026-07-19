@@ -106,3 +106,8 @@ final hasHomeProvider = FutureProvider<bool>((ref) async {
     return false;
   }
 });
+
+/// Provider that fetches the list of homes for the current user.
+final userHomesProvider = FutureProvider<List<HomeModel>>((ref) async {
+  return ref.read(homeRepositoryProvider).getHomes();
+});

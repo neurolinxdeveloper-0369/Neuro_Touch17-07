@@ -17,6 +17,9 @@ func SetupRoutes(app *fiber.App) {
 	auth.Post("/otp/verify", controllers.VerifyOTPLogin)
 	auth.Post("/refresh-token", controllers.RefreshToken)
 
+	// --- Public Device Provisioning Callback (called by ESP12F hardware, no JWT) ---
+	api.Get("/provision/mac-confirm", controllers.MACConfirmEndpoint)
+
 	// --- Protected Routes ---
 	protected := api.Group("", middleware.AuthRequired)
 
@@ -34,6 +37,13 @@ func SetupRoutes(app *fiber.App) {
 	protected.Put("/homes/:id/members/:userId", controllers.UpdateMemberPermission)
 	protected.Delete("/homes/:id/members/:userId", controllers.RemoveMember)
 
+	// Home Network Credentials (for ESP provisioning)
+	protected.Get("/homes/:id/network-credentials", controllers.GetHomeNetworkCredentials)
+
+	// Floors & Rooms
+	protected.Get("/homes/:id/floors", controllers.GetFloors)
+	protected.Get("/floors/:floorId/rooms", controllers.GetRooms)
+
 	// Devices
 	protected.Get("/homes/:id/devices", controllers.GetHomeDevices)
 	protected.Get("/devices/:id", controllers.GetDevice)
@@ -46,6 +56,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// Provisioning Endpoints
 	protected.Post("/provision/generate-uuid", controllers.GenerateDeviceUuid)
+	protected.Post("/provision/validate-panel", controllers.ValidatePanelSSID)
 	protected.Get("/provision/:id/status", controllers.CheckProvisionStatus)
 	protected.Post("/provision/device", controllers.ProvisionDeviceEndpoint)
 

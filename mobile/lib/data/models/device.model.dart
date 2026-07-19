@@ -171,6 +171,7 @@ class DeviceModel extends Equatable {
   final String homeId;
   final DeviceType deviceType;
   final String name;
+  final String? macAddress;
   final String? ssidPattern;
   final String? firmwareVersion;
   final bool isOnline;
@@ -178,12 +179,16 @@ class DeviceModel extends Equatable {
   final int switchCount;
   final Map<String, dynamic> config;
   final List<SwitchConfigModel> switches;
+  final String assignmentType; // floor | room | site | outdoor
+  final String? floorId;
+  final String? roomId;
 
   const DeviceModel({
     required this.id,
     required this.homeId,
     required this.deviceType,
     required this.name,
+    this.macAddress,
     this.ssidPattern,
     this.firmwareVersion,
     this.isOnline = false,
@@ -191,6 +196,9 @@ class DeviceModel extends Equatable {
     this.switchCount = 1,
     this.config = const {},
     this.switches = const [],
+    this.assignmentType = 'room',
+    this.floorId,
+    this.roomId,
   });
 
   factory DeviceModel.fromJson(Map<String, dynamic> json) => DeviceModel(
@@ -199,6 +207,7 @@ class DeviceModel extends Equatable {
         deviceType:
             DeviceTypeExtension.fromString(json['device_type'] as String? ?? ''),
         name: json['name'] as String? ?? '',
+        macAddress: json['mac_address'] as String?,
         ssidPattern: json['ssid_pattern'] as String?,
         firmwareVersion: json['firmware_version'] as String?,
         isOnline: json['is_online'] as bool? ?? false,
@@ -206,10 +215,15 @@ class DeviceModel extends Equatable {
             ? DateTime.tryParse(json['last_seen'] as String)
             : null,
         switchCount: json['switch_count'] as int? ?? 1,
-        config: (json['config'] as Map<String, dynamic>?) ?? {},
+        config: (json['config'] is Map<String, dynamic>)
+            ? (json['config'] as Map<String, dynamic>)
+            : {},
         switches: (json['switches'] as List<dynamic>? ?? [])
             .map((s) => SwitchConfigModel.fromJson(s as Map<String, dynamic>))
             .toList(),
+        assignmentType: json['assignment_type'] as String? ?? 'room',
+        floorId: json['floor_id'] as String?,
+        roomId: json['room_id'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -217,6 +231,7 @@ class DeviceModel extends Equatable {
         'home_id': homeId,
         'device_type': deviceType.apiValue,
         'name': name,
+        'mac_address': macAddress,
         'ssid_pattern': ssidPattern,
         'firmware_version': firmwareVersion,
         'is_online': isOnline,
@@ -224,6 +239,9 @@ class DeviceModel extends Equatable {
         'switch_count': switchCount,
         'config': config,
         'switches': switches.map((s) => s.toJson()).toList(),
+        'assignment_type': assignmentType,
+        'floor_id': floorId,
+        'room_id': roomId,
       };
 
   DeviceModel copyWith({
@@ -231,6 +249,7 @@ class DeviceModel extends Equatable {
     String? homeId,
     DeviceType? deviceType,
     String? name,
+    String? macAddress,
     String? ssidPattern,
     String? firmwareVersion,
     bool? isOnline,
@@ -238,12 +257,16 @@ class DeviceModel extends Equatable {
     int? switchCount,
     Map<String, dynamic>? config,
     List<SwitchConfigModel>? switches,
+    String? assignmentType,
+    String? floorId,
+    String? roomId,
   }) =>
       DeviceModel(
         id: id ?? this.id,
         homeId: homeId ?? this.homeId,
         deviceType: deviceType ?? this.deviceType,
         name: name ?? this.name,
+        macAddress: macAddress ?? this.macAddress,
         ssidPattern: ssidPattern ?? this.ssidPattern,
         firmwareVersion: firmwareVersion ?? this.firmwareVersion,
         isOnline: isOnline ?? this.isOnline,
@@ -251,11 +274,15 @@ class DeviceModel extends Equatable {
         switchCount: switchCount ?? this.switchCount,
         config: config ?? this.config,
         switches: switches ?? this.switches,
+        assignmentType: assignmentType ?? this.assignmentType,
+        floorId: floorId ?? this.floorId,
+        roomId: roomId ?? this.roomId,
       );
 
   @override
   List<Object?> get props => [
-        id, homeId, deviceType, name, ssidPattern,
-        firmwareVersion, isOnline, lastSeen, switchCount, config
+        id, homeId, deviceType, name, macAddress, ssidPattern,
+        firmwareVersion, isOnline, lastSeen, switchCount, config,
+        assignmentType, floorId, roomId,
       ];
 }

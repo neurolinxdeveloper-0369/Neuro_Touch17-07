@@ -1,21 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/dashboard.controller.dart';
 import '../../controllers/mqtt.controller.dart';
 import '../../data/models/device.model.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_typography.dart';
 import '../../core/utils/extensions.dart';
-
-const Color _primary = Color(0xFF06457F);
-const Color _darkBg = Color(0xFF000000);
-const Color _cardDark = Color(0xFF06457F);
-const Color _darkTextPrimary = Color(0xFFFFFFFF);
-const Color _darkTextSecondary = Color(0xFFFFFFFF);
-const Color _lightTextPrimary = Color(0xFF06457F);
-const Color _lightTextSecondary = Color(0xFF06457F);
-const Color _borderDark = Color(0xFF06457F);
-const Color _borderLight = Color(0xFF06457F);
+import '../common/widgets/app_screen_wrapper.dart';
+import '../common/widgets/glass_panel.dart';
 
 class DeviceConfigScreen extends ConsumerStatefulWidget {
   const DeviceConfigScreen({super.key});
@@ -29,122 +22,45 @@ class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.isDark;
     final devices = ref.watch(dashboardControllerProvider).devices;
     final mqttState = ref.watch(mqttControllerProvider);
+    final isDark = context.isDark;
 
     final filtered = _filter == 'all'
         ? devices
         : devices.where((d) => d.deviceType.apiValue == _filter).toList();
 
-    final textSecondary = isDark ? _darkTextSecondary : _lightTextSecondary;
-
-    return Scaffold(
-      backgroundColor: isDark ? _darkBg : Colors.white,
-      appBar: AppBar(
-        title: Text(
-          'Devices',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+    return AppScreenWrapper(
+      title: 'Devices',
+      scrollable: false,
+      actions: [
+        IconButton(
+          onPressed: () => context.push('/add-device'),
+          icon: const Icon(Icons.add_rounded),
         ),
-        backgroundColor: isDark ? _darkBg : Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_rounded),
-            onPressed: () => context.push('/add-device'),
-          ),
-        ],
-      ),
-      body: Column(
+      ],
+      child: Column(
         children: [
-          // Type filter
-          SizedBox(
-            height: 44,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: 6,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, index) {
-                final filters = [
-                  ('all', 'All'),
-                  ('touch_panel', 'Touch Panel'),
-                  ('ir_blaster', 'IR Blaster'),
-                  ('lift_panel', 'Lift'),
-                  ('energy_meter', 'Energy'),
-                  ('temp_monitor', 'Temp'),
-                ];
-                final f = filters[index];
-                final isSelected = _filter == f.$1;
-                return GestureDetector(
-                  onTap: () => setState(() => _filter = f.$1),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected ? _primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? _primary
-                            : (isDark ? _borderDark : _borderLight),
-                      ),
-                    ),
-                    child: Text(
-                      f.$2,
-                      style: GoogleFonts.inter(
-                        color: isSelected
-                            ? Colors.white
-                            : (isDark
-                                ? _darkTextSecondary
-                                : _lightTextSecondary),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+          const SizedBox(height: 12),
+          _DeviceTypeFilter(
+            currentFilter: _filter,
+            onFilterChanged: (f) => setState(() => _filter = f),
           ),
-
-          const SizedBox(height: 8),
-
-          // Device list
+          const SizedBox(height: 16),
           Expanded(
             child: filtered.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.devices_other_outlined,
-                            size: 48,
-                            color: isDark
-                                ? _darkTextSecondary
-                                : _lightTextSecondary),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No devices found',
-                          style: GoogleFonts.inter(
-                            color: textSecondary,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
+                ? _EmptyDevices(isDark: isDark)
                 : ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                    physics: const BouncingScrollPhysics(),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (_, index) {
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
                       final device = filtered[index];
                       final isOnline = mqttState.isDeviceOnline(device.id);
-                      return _DeviceConfigCard(
+                      return _DeviceCard(
                         device: device,
                         isOnline: isOnline,
-                        isDark: isDark,
                         onTap: () => context.push('/devices/${device.id}'),
                       );
                     },
@@ -156,114 +72,162 @@ class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
   }
 }
 
-class _DeviceConfigCard extends StatelessWidget {
-  final DeviceModel device;
-  final bool isOnline;
-  final bool isDark;
-  final VoidCallback onTap;
+class _DeviceTypeFilter extends StatelessWidget {
+  final String currentFilter;
+  final ValueChanged<String> onFilterChanged;
 
-  const _DeviceConfigCard({
-    required this.device,
-    required this.isOnline,
-    required this.isDark,
-    required this.onTap,
-  });
+  const _DeviceTypeFilter({required this.currentFilter, required this.onFilterChanged});
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = isDark ? _cardDark : Colors.white;
-    final textPrimary = isDark ? _darkTextPrimary : _lightTextPrimary;
-    final textSecondary = isDark ? _darkTextSecondary : _lightTextSecondary;
+    final filters = [
+      ('all', 'All'),
+      ('touch_panel', 'Touch'),
+      ('ir_blaster', 'Remote'),
+      ('lift_panel', 'Lift'),
+      ('energy_meter', 'Energy'),
+      ('temp_monitor', 'Climate'),
+    ];
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: filters.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final f = filters[index];
+          final isSelected = currentFilter == f.$1;
+
+          return _FilterChip(
+            label: f.$2,
+            isSelected: isSelected,
+            onTap: () => onFilterChanged(f.$1),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FilterChip({required this.label, required this.isSelected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.cardBackground(context.isDark),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? AppColors.primary : AppColors.borderColor(context.isDark), width: 0.5),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: AppTypography.bodySmall.copyWith(
+              color: isSelected ? Colors.white : AppColors.textPrimary(context.isDark),
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DeviceCard extends StatelessWidget {
+  final DeviceModel device;
+  final bool isOnline;
+  final VoidCallback onTap;
+
+  const _DeviceCard({required this.device, required this.isOnline, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isDark ? _borderDark : _borderLight,
-            width: 0.5,
-          ),
-        ),
+      child: GlassPanel(
+        padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
-                color: device.deviceType.color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
+                color: device.deviceType.color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                device.deviceType.icon,
-                color: device.deviceType.color,
-                size: 24,
-              ),
+              child: Icon(device.deviceType.icon, color: device.deviceType.color, size: 26),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    device.name,
-                    style: GoogleFonts.inter(
-                      color: textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(device.name, style: AppTypography.titleMedium),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Container(
-                        width: 6,
-                        height: 6,
+                        width: 8,
+                        height: 8,
                         decoration: BoxDecoration(
-                          color: isOnline
-                              ? const Color(0xFF00B894)
-                              : const Color(0xFF555E68),
+                          color: isOnline ? AppColors.success : AppColors.textSecondary(isDark).withValues(alpha: 0.3),
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Text(
                         isOnline ? 'Online' : 'Offline',
-                        style: GoogleFonts.inter(
-                          color: isOnline
-                              ? const Color(0xFF00B894)
-                              : textSecondary,
-                          fontSize: 12,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: isOnline ? AppColors.success : AppColors.textSecondary(isDark),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        '•',
-                        style: TextStyle(color: textSecondary),
-                      ),
+                      Text('•', style: TextStyle(color: AppColors.textSecondary(isDark))),
                       const SizedBox(width: 8),
                       Text(
                         device.deviceType.shortName,
-                        style: GoogleFonts.inter(
-                          color: textSecondary,
-                          fontSize: 12,
-                        ),
+                        style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(isDark)),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: textSecondary,
-              size: 20,
-            ),
+            Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary(isDark)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _EmptyDevices extends StatelessWidget {
+  final bool isDark;
+  const _EmptyDevices({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.devices_other_outlined, size: 64, color: AppColors.textSecondary(isDark).withValues(alpha: 0.2)),
+          const SizedBox(height: 16),
+          Text('No devices found', style: AppTypography.bodyLarge.copyWith(color: AppColors.textSecondary(isDark))),
+        ],
       ),
     );
   }

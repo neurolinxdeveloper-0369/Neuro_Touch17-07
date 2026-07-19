@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/auth.controller.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_typography.dart';
 import '../../core/utils/extensions.dart';
+import '../common/widgets/app_button.dart';
+import '../common/widgets/app_screen_wrapper.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/auth_header.dart';
 
@@ -12,8 +15,7 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key, this.purpose = 'forgot_password'});
 
   @override
-  ConsumerState<ForgotPasswordScreen> createState() =>
-      _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
@@ -44,7 +46,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final screenSize = MediaQuery.sizeOf(context);
     final authState = ref.watch(authControllerProvider);
 
     ref.listen<AuthState>(authControllerProvider, (prev, next) {
@@ -54,171 +55,127 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       }
     });
 
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: screenSize.width * 0.06,
-            vertical: 16,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_rounded),
-                onPressed: () => context.pop(),
-                padding: EdgeInsets.zero,
-              ),
-              SizedBox(height: screenSize.height * 0.02),
-
-              if (!_sent) ...[
-                const AuthHeader(
-                  title: 'Forgot Password',
-                  subtitle:
-                      'Enter your email or phone to receive a one-time code',
+    return AppScreenWrapper(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_rounded),
+                  onPressed: () => context.pop(),
+                  padding: EdgeInsets.zero,
                 ),
-                SizedBox(height: screenSize.height * 0.04),
+                const SizedBox(height: 32),
 
-                // Toggle
-                Row(children: [
-                  _TabChip(
-                    label: 'Email',
-                    isSelected: _isEmail,
-                    onTap: () => setState(() => _isEmail = true),
+                if (!_sent) ...[
+                  const AuthHeader(
+                    title: 'Reset Password',
+                    subtitle: 'Enter your details to receive a recovery code',
                   ),
-                  const SizedBox(width: 8),
-                  _TabChip(
-                    label: 'Phone',
-                    isSelected: !_isEmail,
-                    onTap: () => setState(() => _isEmail = false),
-                  ),
-                ]),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 40),
 
-                Form(
-                  key: _formKey,
-                  child: AuthTextField(
-                    controller: _contactController,
-                    label: _isEmail ? 'Email Address' : 'Phone Number',
-                    keyboardType: _isEmail
-                        ? TextInputType.emailAddress
-                        : TextInputType.phone,
-                    prefixIcon: _isEmail
-                        ? Icons.email_outlined
-                        : Icons.phone_outlined,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return _isEmail
-                            ? 'Email is required'
-                            : 'Phone is required';
-                      }
-                      return null;
-                    },
-                    isDark: isDark,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _submit(),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: authState.isLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                  Row(children: [
+                    _TabChip(
+                      label: 'Email',
+                      isSelected: _isEmail,
+                      onTap: () => setState(() => _isEmail = true),
                     ),
-                    child: authState.isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2.5),
-                          )
-                        : Text(
-                            'Send OTP',
-                            style: GoogleFonts.inter(
-                                fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
+                    const SizedBox(width: 12),
+                    _TabChip(
+                      label: 'Phone',
+                      isSelected: !_isEmail,
+                      onTap: () => setState(() => _isEmail = false),
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+
+                  Form(
+                    key: _formKey,
+                    child: AuthTextField(
+                      controller: _contactController,
+                      label: _isEmail ? 'Email Address' : 'Phone Number',
+                      keyboardType: _isEmail
+                          ? TextInputType.emailAddress
+                          : TextInputType.phone,
+                      prefixIcon: _isEmail
+                          ? Icons.email_outlined
+                          : Icons.phone_outlined,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) {
+                          return _isEmail
+                              ? 'Email is required'
+                              : 'Phone is required';
+                        }
+                        return null;
+                      },
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _submit(),
+                    ),
                   ),
-                ),
-              ] else ...[
-                // Success state
-                Center(
-                  child: Column(
-                    children: [
-                      SizedBox(height: screenSize.height * 0.06),
-                      Container(
-                        width: screenSize.width * 0.22,
-                        height: screenSize.width * 0.22,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00B894).withOpacity(0.15),
-                          shape: BoxShape.circle,
+
+                  const SizedBox(height: 40),
+
+                  AppButton(
+                    label: 'Send Recovery Code',
+                    onPressed: _submit,
+                    isLoading: authState.isLoading,
+                  ),
+                ] else ...[
+                  Center(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 48),
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.mark_email_read_outlined,
+                            color: AppColors.success,
+                            size: 40,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.mark_email_read_outlined,
-                          color: Color(0xFF00B894),
-                          size: 48,
+                        const SizedBox(height: 32),
+                        Text(
+                          'Code Sent!',
+                          style: AppTypography.h2,
                         ),
-                      ),
-                      SizedBox(height: screenSize.height * 0.03),
-                      Text(
-                        'OTP Sent!',
-                        style: GoogleFonts.inter(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
+                        const SizedBox(height: 12),
+                        Text(
+                          'We\'ve sent a verification code to\n${_contactController.text.trim()}',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.textSecondary(isDark),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'We\'ve sent a 6-digit code to\n${_contactController.text.trim()}',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          color: isDark
-                              ? const Color(0xFFB2BEC3)
-                              : const Color(0xFF555E68),
-                          fontSize: 15,
-                        ),
-                      ),
-                      SizedBox(height: screenSize.height * 0.05),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
+                        const SizedBox(height: 48),
+                        AppButton(
+                          label: 'Enter Code',
                           onPressed: () => context.push('/otp-verify', extra: {
                             'contact': _contactController.text.trim(),
                             'is_email': _isEmail,
                             'purpose': 'reset_password',
                           }),
-                          style: ElevatedButton.styleFrom(
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: Text(
-                            'Enter OTP',
-                            style: GoogleFonts.inter(
-                                fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: () => setState(() => _sent = false),
-                        child: Text(
-                          'Resend OTP',
-                          style: GoogleFonts.inter(
-                              color: const Color(0xFF4C6FFF)),
+                        const SizedBox(height: 24),
+                        AppButton(
+                          label: 'Resend Code',
+                          type: AppButtonType.text,
+                          onPressed: () => setState(() => _sent = false),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -239,26 +196,25 @@ class _TabChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF4C6FFF) : Colors.transparent,
+          color: isSelected ? AppColors.primary : AppColors.cardBackground(isDark),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF4C6FFF)
-                : const Color(0xFF55595E),
+            color: isSelected ? AppColors.primary : AppColors.borderColor(isDark),
+            width: 0.5,
           ),
         ),
         child: Text(
           label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : const Color(0xFFB2BEC3),
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+          style: AppTypography.bodySmall.copyWith(
+            color: isSelected ? Colors.white : AppColors.textPrimary(isDark),
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
       ),

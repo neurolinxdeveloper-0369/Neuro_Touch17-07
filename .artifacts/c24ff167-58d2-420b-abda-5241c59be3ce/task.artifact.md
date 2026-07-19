@@ -1,4 +1,4 @@
-- [ ] Modify Backend `auth_controller.go` to return OTP
-- [ ] Modify Mobile `AuthRepository` to return OTP
-- [ ] Modify Mobile `AuthController` to return OTP
-- [ ] Modify Mobile `LoginScreen` to display OTP in SnackBar
+- [x] Modify Backend `auth_controller.go` to return OTP
+- [x] Modify Mobile `AuthRepository` to return OTP
+- [x] Modify Mobile `AuthController` to return OTP
+- [x] Modify Mobile `LoginScreen` to display OTP in SnackBar

@@ -207,6 +207,7 @@ func SendOTP(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"success": true,
 		"message": "OTP verification code sent",
+		"otp":     otpCode,
 	})
 }
 

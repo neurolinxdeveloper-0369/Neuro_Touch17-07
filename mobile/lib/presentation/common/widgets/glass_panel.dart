@@ -12,6 +12,7 @@ class GlassPanel extends StatelessWidget {
   final Color? borderColor;
   final double blur;
   final double opacity;
+  final Color? color;
 
   const GlassPanel({
     super.key,
@@ -23,6 +24,7 @@ class GlassPanel extends StatelessWidget {
     this.borderColor,
     this.blur = 10.0,
     this.opacity = 0.08,
+    this.color,
   });
 
   @override
@@ -39,14 +41,17 @@ class GlassPanel extends StatelessWidget {
           height: height,
           padding: padding,
           decoration: BoxDecoration(
-            color: isDark ? AppColors.glassDark(opacity) : AppColors.glassLight(0.05),
+            color: color ?? (isDark ? AppColors.glassDark(opacity) : AppColors.glassLight(0.05)),
             borderRadius: radius,
             border: Border.all(
               color: borderColor ?? AppColors.borderColor(isDark),
               width: 0.5,
             ),
           ),
-          child: child,
+          child: Material(
+            color: Colors.transparent,
+            child: child,
+          ),
         ),
       ),
     );

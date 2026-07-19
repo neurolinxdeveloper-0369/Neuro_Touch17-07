@@ -34,6 +34,7 @@ type Home struct {
 	InviteCode      *string      `gorm:"type:varchar(10);uniqueIndex" json:"invite_code"`
 	Members         []HomeMember `gorm:"foreignKey:HomeID;constraint:OnDelete:CASCADE" json:"members"`
 	Devices         []Device     `gorm:"foreignKey:HomeID;constraint:OnDelete:CASCADE" json:"-"`
+	Floors          []Floor      `gorm:"foreignKey:HomeID;constraint:OnDelete:CASCADE" json:"-"`
 	CreatedAt       time.Time    `json:"created_at"`
 	UpdatedAt       time.Time    `json:"updated_at"`
 }
@@ -46,20 +47,46 @@ type HomeMember struct {
 	JoinedAt        time.Time `gorm:"default:now()" json:"joined_at"`
 }
 
+// Floor represents a physical floor within a multi-floor home/building.
+type Floor struct {
+	ID         string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	HomeID     string    `gorm:"type:uuid;not null;index" json:"home_id"`
+	Name       string    `gorm:"type:varchar(100);not null" json:"name"`
+	OrderIndex int       `gorm:"default:0" json:"order_index"`
+	Rooms      []Room    `gorm:"foreignKey:FloorID;constraint:OnDelete:CASCADE" json:"rooms"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// Room represents a room within a floor.
+type Room struct {
+	ID         string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	FloorID    string    `gorm:"type:uuid;not null;index" json:"floor_id"`
+	HomeID     string    `gorm:"type:uuid;not null;index" json:"home_id"`
+	Name       string    `gorm:"type:varchar(100);not null" json:"name"`
+	Icon       string    `gorm:"type:varchar(50);default:'room'" json:"icon"`
+	OrderIndex int       `gorm:"default:0" json:"order_index"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
 type Device struct {
-	ID              string         `gorm:"primaryKey;type:varchar(50)" json:"id"` // MAC or specific ID
-	HomeID          string         `gorm:"type:uuid;not null" json:"home_id"`
-	DeviceType      string         `gorm:"type:varchar(30);not null" json:"device_type"` // touch_panel | ir_blaster | lift_panel | energy_meter | temp_monitor
-	Name            string         `gorm:"not null" json:"name"`
-	SSIDPattern     *string        `gorm:"type:varchar(100)" json:"ssid_pattern"`
-	FirmwareVersion *string        `gorm:"type:varchar(20)" json:"firmware_version"`
-	IsOnline        bool           `gorm:"default:false" json:"is_online"`
-	LastSeen        *time.Time     `json:"last_seen"`
-	SwitchCount     int            `gorm:"default:1" json:"switch_count"`
-	Config          string         `gorm:"type:text;default:'{}'" json:"config"` // JSON representation of config
-	Switches        []SwitchConfig `gorm:"foreignKey:DeviceID;constraint:OnDelete:CASCADE" json:"switches"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
+	ID             string         `gorm:"primaryKey;type:varchar(50)" json:"id"` // MAC address (AA:BB:CC:DD:EE:FF) or temp UUID
+	HomeID         string         `gorm:"type:uuid;not null" json:"home_id"`
+	DeviceType     string         `gorm:"type:varchar(30);not null" json:"device_type"` // touch_panel | ir_blaster | lift_panel | energy_meter | temp_monitor
+	Name           string         `gorm:"not null" json:"name"`
+	MACAddress     *string        `gorm:"type:varchar(17);uniqueIndex;column:mac_address" json:"mac_address"` // e.g. AA:BB:CC:DD:EE:FF
+	SSIDPattern    *string        `gorm:"type:varchar(100)" json:"ssid_pattern"`
+	FirmwareVersion *string       `gorm:"type:varchar(20)" json:"firmware_version"`
+	IsOnline       bool           `gorm:"default:false" json:"is_online"`
+	LastSeen       *time.Time     `json:"last_seen"`
+	SwitchCount    int            `gorm:"default:1" json:"switch_count"`
+	Config         string         `gorm:"type:text;default:'{}'" json:"config"` // JSON blob
+	// Assignment
+	AssignmentType string         `gorm:"type:varchar(20);default:'room'" json:"assignment_type"` // floor | room | site | outdoor
+	FloorID        *string        `gorm:"type:uuid;index" json:"floor_id"`
+	RoomID         *string        `gorm:"type:uuid;index" json:"room_id"`
+	Switches       []SwitchConfig `gorm:"foreignKey:DeviceID;constraint:OnDelete:CASCADE" json:"switches"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
 }
 
 type SwitchConfig struct {

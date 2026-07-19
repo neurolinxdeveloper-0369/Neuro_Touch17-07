@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/auth.controller.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_typography.dart';
 import '../../core/utils/extensions.dart';
+import '../common/widgets/app_screen_wrapper.dart';
+import '../common/widgets/glass_panel.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -12,71 +15,49 @@ class ProfileScreen extends ConsumerWidget {
     final isDark = context.isDark;
     final user = ref.watch(currentUserProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Profile',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-        elevation: 0,
-        actions: [
-          TextButton(onPressed: () {}, child: const Text('Edit')),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Avatar
-          Center(
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 48,
-                  backgroundColor: const Color(0xFF4C6FFF).withOpacity(0.15),
-                  backgroundImage: (user?.profilePictureUrl != null && user!.profilePictureUrl!.isNotEmpty)
-                      ? NetworkImage(user.profilePictureUrl!)
-                      : null,
-                  child: (user?.profilePictureUrl == null || user!.profilePictureUrl!.isEmpty)
-                      ? Text(
-                          user?.name.initials ?? '?',
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF4C6FFF),
-                            fontSize: 32,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  user?.name ?? 'Guest',
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
+    return AppScreenWrapper(
+      title: 'Profile',
+      actions: [
+        TextButton(onPressed: () {}, child: const Text('Edit')),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            Center(
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 56,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    backgroundImage: user?.profilePictureUrl != null ? NetworkImage(user!.profilePictureUrl!) : null,
+                    child: user?.profilePictureUrl == null
+                        ? Text(
+                            user?.name.initials ?? '?',
+                            style: AppTypography.h1.copyWith(color: AppColors.primary, fontSize: 40),
+                          )
+                        : null,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user?.contactDisplay ?? '',
-                  style: GoogleFonts.inter(
-                    color: isDark ? const Color(0xFFB2BEC3) : const Color(0xFF555E68),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  Text(user?.name ?? 'Neuro Touch User', style: AppTypography.h2),
+                  Text(user?.contactDisplay ?? '', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary(isDark))),
+                ],
+              ),
             ),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Details
-          _DetailRow(label: 'Name', value: user?.name ?? '-', isDark: isDark),
-          _DetailRow(label: 'Email', value: user?.email ?? '-', isDark: isDark),
-          _DetailRow(label: 'Phone', value: user?.phone ?? '-', isDark: isDark),
-          _DetailRow(
-            label: 'Joined',
-            value: user?.createdAt.formatDate ?? '-',
-            isDark: isDark,
-          ),
-        ],
+            const SizedBox(height: 48),
+            GlassPanel(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                children: [
+                  _DetailRow(label: 'Full Name', value: user?.name ?? '-'),
+                  _DetailRow(label: 'Email Address', value: user?.email ?? '-'),
+                  _DetailRow(label: 'Phone Number', value: user?.phone ?? '-'),
+                  _DetailRow(label: 'Member Since', value: user?.createdAt.formatDate ?? '-', isLast: true),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -85,46 +66,23 @@ class ProfileScreen extends ConsumerWidget {
 class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
-  final bool isDark;
+  final bool isLast;
 
-  const _DetailRow({required this.label, required this.value, required this.isDark});
+  const _DetailRow({required this.label, required this.value, this.isLast = false});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF45484D) : const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? const Color(0xFF55595E) : const Color(0xFFD1D5DB),
-          width: 0.5,
-        ),
+        border: isLast ? null : Border(bottom: BorderSide(color: AppColors.borderColor(isDark), width: 0.5)),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: GoogleFonts.inter(
-                color: isDark ? const Color(0xFFB2BEC3) : const Color(0xFF555E68),
-                fontSize: 13,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 4,
-            child: Text(
-              value,
-              style: GoogleFonts.inter(
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
+          Text(label, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(isDark))),
+          Text(value, style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
         ],
       ),
     );

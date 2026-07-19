@@ -1,56 +1,35 @@
-# Implementation Plan - Auth Flow & Security Fixes
+# Implementation Plan - Back Gesture & Navigation Polish
 
-This plan implements the fixes identified in the [Auth Flow Audit](file:///B:/IoT_Neuro%20Touch/IoT_Neuro%20Touch/mobile/.artifacts/6bbf40d8-b99c-42fd-8fb5-a6f9cb38d27a/auth_flow_audit.artifact.md).
+This plan addresses the back gesture behavior and improves the bottom navigation bar's compatibility with different system navigation modes (Gesture vs. Button bar).
 
 ## User Review Required
 
 > [!IMPORTANT]
-> - **Security Change**: The app will no longer receive the OTP code from the backend. This requires the backend to be updated (or mock data adjusted) to not return the code.
-> - **Navigation Change**: Manual navigation calls in Login and OTP screens are being removed. `GoRouter` will now centrally manage all redirects based on the authentication state.
+> - **Back Gesture Change**: Swiping back from any main tab (Settings, Notifications, etc.) will now navigate you to the Home Dashboard instead of closing the app. Only swiping back from the Home tab will prompt an exit.
+> - **Layout Adjustment**: The bottom navigation pill's vertical position will now dynamically adjust based on the device's system navigation style to ensure it never overlaps with buttons or gestures.
 
 ## Proposed Changes
 
-### [Component] Data Layer
+### [Component] Main Shell & Navigation
 
-#### [MODIFY] [auth.repository.dart](file:///B:/IoT_Neuro%20Touch/IoT_Neuro%20Touch/mobile/lib/data/repositories/auth.repository.dart)
-- Change `sendOtp` return type from `Future<String?>` to `Future<void>`.
-- Remove code that extracts `otp` from the response.
-
----
-
-### [Component] Controllers
-
-#### [MODIFY] [auth.controller.dart](file:///B:/IoT_Neuro%20Touch/IoT_Neuro%20Touch/mobile/lib/controllers/auth.controller.dart)
-- Update `sendOtp` to match repository changes.
-- In `_init()`, add `_googleSignIn.signInSilently()` to automatically restore Google sessions if local tokens are missing or need refreshing.
-
----
-
-### [Component] Routing & Navigation
-
-#### [MODIFY] [app_router.dart](file:///B:/IoT_Neuro%20Touch/IoT_Neuro%20Touch/mobile/lib/core/router/app_router.dart)
-- Update `redirect` logic to handle navigation from `/splash` to `/dashboard` or `/login` once the `AuthStatus` is resolved.
-
-#### [MODIFY] [splash_screen.dart](file:///B:/IoT_Neuro%20Touch/IoT_Neuro%20Touch/mobile/lib/presentation/splash/splash_screen.dart)
-- Remove the fixed `Future.delayed` timer for navigation.
-- The screen will now purely show the animation, and `GoRouter` (via the `redirect` function and `refreshListenable`) will trigger the move to the next screen as soon as the `AuthController` finishes initialization.
-
-#### [MODIFY] [login_screen.dart](file:///B:/IoT_Neuro%20Touch/IoT_Neuro%20Touch/mobile/lib/presentation/auth/login_screen.dart)
-- Remove the debug SnackBar that displayed the OTP code.
-- Remove the `ref.listen` block that manually called `context.go('/dashboard')`.
-
-#### [MODIFY] [otp_verify_screen.dart](file:///B:/IoT_Neuro%20Touch/IoT_Neuro%20Touch/mobile/lib/presentation/auth/otp_verify_screen.dart)
-- Remove the `ref.listen` block that manually called `context.go('/dashboard')`.
+#### [MODIFY] [main_shell.dart](file:///B:/IoT_Neuro%20Touch/IoT_Neuro%20Touch/mobile/lib/presentation/shell/main_shell.dart)
+- **Back Gesture Handling**:
+    - Wrap the `Scaffold` in a `PopScope`.
+    - Set `canPop` to `true` only if `currentIndex == 0`.
+    - Implement `onPopInvoked` to switch the active branch to Home (index 0) if the user tries to pop from a different tab.
+- **Adaptive Bottom Spacing**:
+    - Update `_BottomNav` to use `MediaQuery.paddingOf(context).bottom`.
+    - Implement a safe-aware margin that adds a fixed gap (e.g., 20px) on top of whatever space the system navigation occupies. This ensures the "pill" always floats cleanly whether the user has Gesture Navigation or 3-Button Navigation enabled.
+- **Visual Polish**:
+    - Ensure the `_NavItem` icons and labels are vertically centered within the pill.
 
 ---
 
 ## Verification Plan
 
-### Automated Tests
-- Run `analyze_file` on all modified files to ensure no syntax errors or breaking changes in the API contracts.
-
 ### Manual Verification
-- **Cold Boot**: Verify Splash screen shows and then transitions to either Dashboard (if logged in) or Login (if logged out).
-- **Google Sign-In**: Verify successful login redirects to Dashboard without manual `context.go` calls.
-- **OTP Flow**: Verify OTP entry redirects to Dashboard upon success.
-- **Security**: Verify no OTP code is visible in logs or UI after the "Send OTP" action.
+- [ ] **Back Gesture (Root Tabs)**: Go to the Settings tab, swipe back. Verify it switches to the Home tab.
+- [ ] **App Exit**: On the Home tab, swipe back. Verify the app closes (expected behavior for the root).
+- [ ] **System Nav Compatibility**:
+    - Switch Android to "3-Button Navigation". Verify the pill floats above the buttons.
+    - Switch Android to "Gesture Navigation". Verify the pill floats above the gesture bar.

@@ -6,6 +6,8 @@ import 'storage_service.dart';
 
 class ApiClient {
   final Dio _dio;
+  bool _isRefreshing = false;
+  final List<void Function(String?)> _refreshQueue = [];
 
   ApiClient._() : _dio = Dio() {
     _dio.options = BaseOptions(
@@ -44,9 +46,26 @@ class ApiClient {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    // 401 → try refresh
     if (err.response?.statusCode == 401) {
+      // If refresh is already in progress, queue this request
+      if (_isRefreshing) {
+        _refreshQueue.add((newToken) {
+          if (newToken != null) {
+            err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
+            _dio.fetch(err.requestOptions).then(
+              (value) => handler.resolve(value),
+              onError: (e) => handler.reject(e),
+            );
+          } else {
+            handler.reject(err);
+          }
+        });
+        return;
+      }
+
+      _isRefreshing = true;
       final refreshToken = await StorageService.instance.getRefreshToken();
+
       if (refreshToken != null) {
         try {
           final resp = await Dio().post(
@@ -54,25 +73,42 @@ class ApiClient {
             data: jsonEncode({'refresh_token': refreshToken}),
             options: Options(headers: {'Content-Type': 'application/json'}),
           );
+
           final newToken = resp.data['access_token'] as String?;
           if (newToken != null) {
             await StorageService.instance.saveTokens(newToken, refreshToken);
+            
+            // Resolve current request
             err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
             final retryResp = await _dio.fetch(err.requestOptions);
+            
+            // Flush queue
+            for (var callback in _refreshQueue) {
+              callback(newToken);
+            }
+            _refreshQueue.clear();
+            _isRefreshing = false;
+            
             return handler.resolve(retryResp);
           }
         } catch (_) {
+          // Refresh failed, clear everything
           await StorageService.instance.clearAll();
+          for (var callback in _refreshQueue) {
+            callback(null);
+          }
+          _refreshQueue.clear();
+          _isRefreshing = false;
         }
+      } else {
+        _isRefreshing = false;
       }
     }
     return handler.next(err);
   }
 
   // Generic request helpers
-
-  Future<Response<T>> get<T>(String path,
-      {Map<String, dynamic>? queryParameters}) =>
+  Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters}) =>
       _dio.get<T>(path, queryParameters: queryParameters);
 
   Future<Response<T>> post<T>(String path, {dynamic data}) =>

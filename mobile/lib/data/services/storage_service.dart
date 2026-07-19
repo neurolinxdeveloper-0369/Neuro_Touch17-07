@@ -55,20 +55,45 @@ class StorageService {
   // --- User ---
 
   Future<void> saveUser(UserModel user) async {
-    await _prefsBox.put(_userKey, jsonEncode(user.toJson()));
+    // Save to Secure Storage instead of Hive for security
+    await _secureStorage.write(
+      key: _userKey,
+      value: jsonEncode(user.toJson()),
+    );
+    // Clear legacy Hive key if it exists
+    if (_prefsBox.containsKey(_userKey)) {
+      await _prefsBox.delete(_userKey);
+    }
   }
 
-  UserModel? getUser() {
-    final raw = _prefsBox.get(_userKey) as String?;
-    if (raw == null) return null;
+  Future<UserModel?> getUser() async {
+    // Try Secure Storage first
+    final secureRaw = await _secureStorage.read(key: _userKey);
+    if (secureRaw != null) {
+      try {
+        return UserModel.fromJson(jsonDecode(secureRaw) as Map<String, dynamic>);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    // Fallback to Hive for legacy migration (one-time)
+    final hiveRaw = _prefsBox.get(_userKey) as String?;
+    if (hiveRaw == null) return null;
     try {
-      return UserModel.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      final user = UserModel.fromJson(jsonDecode(hiveRaw) as Map<String, dynamic>);
+      // Migrate to secure storage
+      await saveUser(user);
+      return user;
     } catch (_) {
       return null;
     }
   }
 
-  Future<void> clearUser() => _prefsBox.delete(_userKey);
+  Future<void> clearUser() async {
+    await _secureStorage.delete(key: _userKey);
+    await _prefsBox.delete(_userKey);
+  }
 
   // --- Home ---
 

@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/device.model.dart';
+import '../models/floor.model.dart';
+import '../models/room.model.dart';
 import '../models/telemetry.model.dart';
 import '../services/api_client.dart';
 import '../../core/constants/api_constants.dart';
@@ -9,7 +11,7 @@ class DeviceRepository {
 
   DeviceRepository({required ApiClient api}) : _api = api;
 
-  // --- Devices ---
+  // ─── Devices ──────────────────────────────────────────────
 
   Future<List<DeviceModel>> getHomeDevices(String homeId) async {
     final resp = await _api.get(ApiConstants.homeDevices(homeId));
@@ -60,7 +62,7 @@ class DeviceRepository {
     });
   }
 
-  // --- Switches ---
+  // ─── Switches ──────────────────────────────────────────────
 
   Future<List<SwitchConfigModel>> getSwitches(String deviceId) async {
     final resp = await _api.get(ApiConstants.deviceSwitches(deviceId));
@@ -91,7 +93,7 @@ class DeviceRepository {
     return SwitchConfigModel.fromJson(data['switch'] as Map<String, dynamic>);
   }
 
-  // --- IR Profiles ---
+  // ─── IR Profiles ──────────────────────────────────────────
 
   Future<Map<String, dynamic>> getIRProfiles(
     String deviceId,
@@ -106,7 +108,7 @@ class DeviceRepository {
     return data;
   }
 
-  // --- Telemetry ---
+  // ─── Telemetry ──────────────────────────────────────────────
 
   Future<Map<String, TelemetryModel>> getLatestTelemetry(
       String deviceId) async {
@@ -123,7 +125,7 @@ class DeviceRepository {
   Future<TelemetryHistoryModel> getTelemetryHistory(
     String deviceId,
     String metric, {
-    String resolution = 'hourly', // raw | hourly | daily
+    String resolution = 'hourly',
     DateTime? from,
     DateTime? to,
   }) async {
@@ -141,7 +143,27 @@ class DeviceRepository {
     return TelemetryHistoryModel.fromJson(data['history'] as Map<String, dynamic>);
   }
 
-  // --- Provisioning ---
+  // ─── Floors & Rooms ──────────────────────────────────────────────
+
+  Future<List<FloorModel>> getHomeFloors(String homeId) async {
+    final resp = await _api.get(ApiConstants.homeFloors(homeId));
+    final data = resp.data as Map<String, dynamic>;
+    if (data['success'] != true) throw Exception(data['error']);
+    return (data['floors'] as List<dynamic>)
+        .map((f) => FloorModel.fromJson(f as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<RoomModel>> getFloorRooms(String floorId) async {
+    final resp = await _api.get(ApiConstants.floorRooms(floorId));
+    final data = resp.data as Map<String, dynamic>;
+    if (data['success'] != true) throw Exception(data['error']);
+    return (data['rooms'] as List<dynamic>)
+        .map((r) => RoomModel.fromJson(r as Map<String, dynamic>))
+        .toList();
+  }
+
+  // ─── Provisioning ──────────────────────────────────────────────
 
   Future<String> generateDeviceUuid() async {
     final resp = await _api.post(ApiConstants.generateUuid);
@@ -156,23 +178,39 @@ class DeviceRepository {
     return data['status'] as String? ?? 'pending';
   }
 
+  Future<Map<String, String?>> getHomeNetworkCredentials(String homeId) async {
+    final resp =
+        await _api.get(ApiConstants.homeNetworkCredentials(homeId));
+    final data = resp.data as Map<String, dynamic>;
+    if (data['success'] != true) throw Exception(data['error']);
+    return {
+      'ssid': data['network_ssid'] as String?,
+      'password': data['network_password'] as String?,
+    };
+  }
+
   Future<DeviceModel> provisionDevice({
-    required String deviceId,
     required String homeId,
-    required String roomId,
+    required String macAddress,
     required String deviceType,
     required String name,
     required String ssidPattern,
     required int switchCount,
+    required String assignmentType,
+    String? floorId,
+    String? roomId,
   }) async {
     final resp = await _api.post(ApiConstants.provisionDevice, data: {
-      'device_id': deviceId,
       'home_id': homeId,
-      'room_id': roomId,
+      'mac_address': macAddress,
+      'device_id': macAddress, // use MAC as permanent ID
       'device_type': deviceType,
       'name': name,
       'ssid_pattern': ssidPattern,
       'switch_count': switchCount,
+      'assignment_type': assignmentType,
+      if (floorId != null) 'floor_id': floorId,
+      if (roomId != null) 'room_id': roomId,
     });
     final data = resp.data as Map<String, dynamic>;
     if (data['success'] != true) throw Exception(data['error']);

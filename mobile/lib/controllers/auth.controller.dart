@@ -13,6 +13,7 @@ class AuthState {
   final String? error;
   final bool isMfaRequired;
   final String? mfaTempToken;
+  final bool isInitialized;
 
   const AuthState({
     this.status = AuthStatus.initial,
@@ -20,6 +21,7 @@ class AuthState {
     this.error,
     this.isMfaRequired = false,
     this.mfaTempToken,
+    this.isInitialized = false,
   });
 
   AuthState copyWith({
@@ -28,6 +30,7 @@ class AuthState {
     String? error,
     bool? isMfaRequired,
     String? mfaTempToken,
+    bool? isInitialized,
   }) =>
       AuthState(
         status: status ?? this.status,
@@ -35,6 +38,7 @@ class AuthState {
         error: error ?? this.error,
         isMfaRequired: isMfaRequired ?? this.isMfaRequired,
         mfaTempToken: mfaTempToken ?? this.mfaTempToken,
+        isInitialized: isInitialized ?? this.isInitialized,
       );
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
@@ -62,12 +66,48 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> _init() async {
-    final cached = _storage.getUser();
-    final token = await _storage.getAccessToken();
-    if (cached != null && token != null) {
-      state = AuthState(status: AuthStatus.authenticated, user: cached);
-    } else {
-      state = const AuthState(status: AuthStatus.unauthenticated);
+    final stopwatch = Stopwatch()..start();
+    try {
+      state = state.copyWith(status: AuthStatus.loading);
+      final cached = await _storage.getUser();
+      final token = await _storage.getAccessToken();
+
+      // We'll store the target state here but only apply it after 5 seconds
+      AuthState targetState;
+
+      if (cached != null && token != null) {
+        targetState = AuthState(status: AuthStatus.authenticated, user: cached);
+      } else {
+        // Silent Google Sign-In attempt
+        final silentAccount = await _googleSignIn.signInSilently();
+        if (silentAccount != null) {
+          final auth = await silentAccount.authentication;
+          if (auth.idToken != null) {
+            final user = await _repo.googleAuth(auth.idToken!);
+            targetState = AuthState(status: AuthStatus.authenticated, user: user);
+          } else {
+            targetState = const AuthState(status: AuthStatus.unauthenticated);
+          }
+        } else {
+          targetState = const AuthState(status: AuthStatus.unauthenticated);
+        }
+      }
+
+      // Ensure at least 5 seconds have passed
+      final elapsed = stopwatch.elapsed;
+      if (elapsed.inSeconds < 5) {
+        await Future.delayed(Duration(seconds: 5) - elapsed);
+      }
+      state = targetState.copyWith(isInitialized: true);
+    } catch (e) {
+      print('Auth initialization error: $e');
+      final elapsed = stopwatch.elapsed;
+      if (elapsed.inSeconds < 5) {
+        await Future.delayed(Duration(seconds: 5) - elapsed);
+      }
+      state = const AuthState(status: AuthStatus.unauthenticated, isInitialized: true);
+    } finally {
+      stopwatch.stop();
     }
   }
 
@@ -99,7 +139,7 @@ class AuthController extends StateNotifier<AuthState> {
         otp: otp,
         name: name,
       );
-      state = AuthState(status: AuthStatus.authenticated, user: user);
+      state = state.copyWith(status: AuthStatus.authenticated, user: user);
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.error,
@@ -125,7 +165,7 @@ class AuthController extends StateNotifier<AuthState> {
       if (idToken == null) throw Exception('Google auth failed: no ID token');
 
       final user = await _repo.googleAuth(idToken);
-      state = AuthState(status: AuthStatus.authenticated, user: user);
+      state = state.copyWith(status: AuthStatus.authenticated, user: user);
     } catch (e, stack) {
       print('Google Sign-in Error: $e');
       print('Google Sign-in Stack: $stack');
@@ -152,7 +192,7 @@ class AuthController extends StateNotifier<AuthState> {
     try {
       await _googleSignIn.signOut();
     } catch (_) {}
-    state = const AuthState(status: AuthStatus.unauthenticated);
+    state = state.copyWith(status: AuthStatus.unauthenticated, user: null);
   }
 
   void clearError() {
@@ -161,11 +201,14 @@ class AuthController extends StateNotifier<AuthState> {
 
   String _parseError(Object e) {
     final msg = e.toString();
+    if (msg.contains('Connection refused') || msg.contains('SocketException')) {
+      return 'Cannot reach the server. Please ensure the backend is running and you are connected to the same network.';
+    }
     if (msg.contains('Exception:')) {
       return msg.replaceFirst('Exception: ', '');
     }
     if (msg.contains('DioException')) {
-      return 'Network error. Please check your connection.';
+      return 'Network error. Please check your internet connection.';
     }
     return msg;
   }

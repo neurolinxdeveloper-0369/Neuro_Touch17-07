@@ -24,6 +24,14 @@ class ApiConstants {
   static String homeMember(String homeId, String userId) =>
       '/homes/$homeId/members/$userId';
 
+  // --- Network Credentials (for ESP provisioning) ---
+  static String homeNetworkCredentials(String homeId) =>
+      '/homes/$homeId/network-credentials';
+
+  // --- Floors & Rooms ---
+  static String homeFloors(String homeId) => '/homes/$homeId/floors';
+  static String floorRooms(String floorId) => '/floors/$floorId/rooms';
+
   // --- Devices ---
   static String homeDevices(String homeId) => '/homes/$homeId/devices';
   static String device(String id) => '/devices/$id';
@@ -59,7 +67,13 @@ class ApiConstants {
 
   // --- Provisioning ---
   static const String generateUuid = '/provision/generate-uuid';
+  static const String validatePanel = '/provision/validate-panel';
   static String provisionStatus(String deviceId) =>
       '/provision/$deviceId/status';
   static const String provisionDevice = '/provision/device';
+
+  // --- ESP12F Device AP (SoftAP direct connection) ---
+  /// Fixed IP of the ESP12F in AP mode — only reachable when phone is on device hotspot
+  static const String espApBaseUrl = 'http://192.168.0.4';
+  static const String espConfigEndpoint = '/config';
 }

@@ -147,7 +147,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'provisioning',
-            builder: (context, state) => const SoftApFlowScreen(),
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>? ?? {};
+              final panelNumber = extra['panelNumber'] as int? ?? 6;
+              return SoftApFlowScreen(panelNumber: panelNumber);
+            },
           ),
         ],
       ),
