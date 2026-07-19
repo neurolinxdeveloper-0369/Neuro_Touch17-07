@@ -145,11 +145,20 @@ func GetHomeNetworkCredentials(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(string)
 	homeID := c.Params("id")
 
-	home, err := checkHomeAccess(config.AppConfig.DB, homeID, userID, false)
-	if err != nil {
+	// Verify the user is a member of this home
+	if _, err := checkHomeAccess(config.AppConfig.DB, homeID, userID, false); err != nil {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"success": false,
 			"error":   "Access denied",
+		})
+	}
+
+	// Fetch the home record separately to get credentials
+	var home models.Home
+	if err := config.AppConfig.DB.First(&home, "id = ?", homeID).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success": false,
+			"error":   "Home not found",
 		})
 	}
 
