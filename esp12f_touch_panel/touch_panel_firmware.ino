@@ -53,7 +53,7 @@
   #define TOSTRING(x)  STRINGIFY(x)
 
   // Backend server (the Go API) — update to your server's public IP/domain
-  #define BACKEND_HOST           "http://129.121.12.144:8082"
+  #define BACKEND_HOST           "http://129.121.120.144:8082"
   #define BACKEND_PROVISION_PATH "/api/v1/provision/mac-confirm"
 
   // AP Credentials — SSID suffix matches panel number (e.g. Rollin_Lift_Panel_8)

@@ -193,8 +193,11 @@ class ProvisionNotifier extends StateNotifier<ProvisionState> {
         homePassword: creds['password'],
         floors: floors,
       );
-    } catch (_) {
-      // Non-fatal — credentials can be entered manually
+    } catch (e) {
+      state = state.copyWith(
+        step: ProvisionStep.error,
+        errorMessage: 'Could not communicate with the server to start setup. Please ensure you are connected to the internet before starting this process, and try again.',
+      );
     }
   }
 
