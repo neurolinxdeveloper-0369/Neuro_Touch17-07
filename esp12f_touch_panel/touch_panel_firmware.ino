@@ -116,6 +116,11 @@
     EEPROM.write(VALID_FLAG, 0xAB);
     EEPROM.commit();
     EEPROM.end();
+    
+    savedSSID = ssid;
+    savedPassword = pass;
+    savedDeviceId = deviceId;
+    
     Serial.println("[EEPROM] Credentials saved.");
   }
 
