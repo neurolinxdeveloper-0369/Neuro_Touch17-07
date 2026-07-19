@@ -397,17 +397,24 @@ class _NetworkChoiceStep extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
           // Home network option
-          if (state.homeSsid != null && state.homeSsid!.isNotEmpty)
-            _NetworkOption(
-              isDark: isDark,
-              icon: Icons.home_rounded,
-              title: 'Home Network',
-              subtitle: state.homeSsid!,
-              badge: 'Recommended',
-              onTap: () => ref
-                  .read(provisionControllerProvider.notifier)
-                  .selectHomeNetwork(),
-            ),
+          _NetworkOption(
+            isDark: isDark,
+            icon: Icons.home_rounded,
+            title: 'Home Network',
+            subtitle: (state.homeSsid != null && state.homeSsid!.isNotEmpty)
+                ? state.homeSsid!
+                : 'Not configured (Tap to enter manually)',
+            badge: (state.homeSsid != null && state.homeSsid!.isNotEmpty)
+                ? 'Recommended'
+                : null,
+            onTap: () {
+              if (state.homeSsid != null && state.homeSsid!.isNotEmpty) {
+                ref.read(provisionControllerProvider.notifier).selectHomeNetwork();
+              } else {
+                ref.read(provisionControllerProvider.notifier).selectCustomNetwork();
+              }
+            },
+          ),
           const SizedBox(height: 16),
           _NetworkOption(
             isDark: isDark,
