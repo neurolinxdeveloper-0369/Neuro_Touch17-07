@@ -11,12 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// MACConfirmEndpoint is called by the ESP12F hardware after it successfully
-// connects to the home Wi-Fi. It updates the device record with the real MAC
-// address and marks it as online. This endpoint is PUBLIC (no auth) because
-// the ESP device cannot carry a JWT.
-//
-// GET /provision/mac-confirm?mac=AA:BB:CC:DD:EE:FF&device_id=nt-XXXXXXXX
+var PendingProvisionings = struct {
+	sync.RWMutex
+	Devices map[string]time.Time
+}{
+	Devices: make(map[string]time.Time),
+}
+
+// MACConfirmEndpoint is a public endpoint called by the ESP12F panel
+// once it successfully connects to the local Wi-Fi.
 func MACConfirmEndpoint(c *fiber.Ctx) error {
 	mac := c.Query("mac")
 	tempDeviceID := c.Query("device_id")
@@ -24,23 +27,24 @@ func MACConfirmEndpoint(c *fiber.Ctx) error {
 	if mac == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error":   "mac query parameter is required",
+			"error":   "Missing MAC address",
 		})
 	}
 
+	mac = strings.ToUpper(mac)
 	now := time.Now()
 
-	// Try to find an existing device by temp device ID first
 	var device models.Device
 	found := false
 
+	// First try by ID (if provided)
 	if tempDeviceID != "" {
 		if err := config.AppConfig.DB.First(&device, "id = ?", tempDeviceID).Error; err == nil {
 			found = true
 		}
 	}
 
-	// Also try by MAC address in case device was already registered
+	// Then try by MAC
 	if !found {
 		if err := config.AppConfig.DB.First(&device, "mac_address = ?", mac).Error; err == nil {
 			found = true
@@ -48,7 +52,7 @@ func MACConfirmEndpoint(c *fiber.Ctx) error {
 	}
 
 	if found {
-		// Update existing record: set MAC, online status, and last seen
+		// Update existing record
 		if err := config.AppConfig.DB.Model(&device).Updates(models.Device{
 			MACAddress: &mac,
 			IsOnline:   true,
@@ -59,27 +63,19 @@ func MACConfirmEndpoint(c *fiber.Ctx) error {
 				"error":   "Failed to update device: " + err.Error(),
 			})
 		}
-	} else {
-		// Device not provisioned yet — create a stub that the app will complete
-		device = models.Device{
-			ID:         mac,
-			MACAddress: &mac,
-			HomeID:     "",  // Will be set when app completes provisioning
-			DeviceType: "touch_panel",
-			Name:       "New Touch Panel",
-			IsOnline:   true,
-			LastSeen:   &now,
-		}
-		config.AppConfig.DB.Create(&device)
+	} else if tempDeviceID != "" {
+		// Store in memory so CheckProvisionStatus can see it
+		PendingProvisionings.Lock()
+		PendingProvisionings.Devices[tempDeviceID] = now
+		PendingProvisionings.Unlock()
 	}
 
 	return c.JSON(fiber.Map{
 		"success":     true,
 		"mac_address": mac,
-		"device_id":   device.ID,
+		"device_id":   tempDeviceID,
 	})
 }
-
 
 // ─────────────────────────────────────────────────
 // Generate Temporary Device UUID (pre-provisioning)
@@ -108,7 +104,7 @@ func expectedSSID(panelNumber int) string {
 	return fmt.Sprintf("Rollin_Lift_Panel_%d", panelNumber)
 }
 
-// ValidatePanelSSID checks that the connected SSID matches the selected panel.
+// ValidatePanelSSID checks if the selected panel matches the connected SSID.
 func ValidatePanelSSID(c *fiber.Ctx) error {
 	var input ValidatePanelInput
 	if err := c.BodyParser(&input); err != nil {
@@ -232,24 +228,37 @@ func GetRooms(c *fiber.Ctx) error {
 func CheckProvisionStatus(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
 
+	// 1. Check DB first (in case app already created it or it existed before)
 	var device models.Device
 	err := config.AppConfig.DB.First(&device, "id = ?", deviceID).Error
-	if err != nil {
+	if err == nil {
+		status := "offline"
+		if device.IsOnline {
+			status = "online"
+		}
 		return c.JSON(fiber.Map{
-			"success": true,
-			"status":  "pending",
+			"success":     true,
+			"status":      status,
+			"mac_address": device.MACAddress,
+			"device_id":   device.ID,
 		})
 	}
 
-	status := "offline"
-	if device.IsOnline {
-		status = "online"
+	// 2. Check pending memory map (waiting for app to finish provisioning)
+	PendingProvisionings.RLock()
+	_, pending := PendingProvisionings.Devices[deviceID]
+	PendingProvisionings.RUnlock()
+
+	if pending {
+		return c.JSON(fiber.Map{
+			"success": true,
+			"status":  "online",
+		})
 	}
 
 	return c.JSON(fiber.Map{
-		"success":     true,
-		"status":      status,
-		"mac_address": device.MACAddress,
+		"success": true,
+		"status":  "pending",
 	})
 }
 
