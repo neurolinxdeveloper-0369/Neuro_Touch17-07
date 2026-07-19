@@ -15,9 +15,9 @@ import (
 
 var PendingProvisionings = struct {
 	sync.RWMutex
-	Devices map[string]time.Time
+	Devices map[string]string // map[tempDeviceID]MACAddress
 }{
-	Devices: make(map[string]time.Time),
+	Devices: make(map[string]string),
 }
 
 // MACConfirmEndpoint is a public endpoint called by the ESP12F panel
@@ -68,7 +68,7 @@ func MACConfirmEndpoint(c *fiber.Ctx) error {
 	} else if tempDeviceID != "" {
 		// Store in memory so CheckProvisionStatus can see it
 		PendingProvisionings.Lock()
-		PendingProvisionings.Devices[tempDeviceID] = now
+		PendingProvisionings.Devices[tempDeviceID] = mac
 		PendingProvisionings.Unlock()
 	}
 
@@ -248,13 +248,15 @@ func CheckProvisionStatus(c *fiber.Ctx) error {
 
 	// 2. Check pending memory map (waiting for app to finish provisioning)
 	PendingProvisionings.RLock()
-	_, pending := PendingProvisionings.Devices[deviceID]
+	pendingMAC, pending := PendingProvisionings.Devices[deviceID]
 	PendingProvisionings.RUnlock()
 
 	if pending {
 		return c.JSON(fiber.Map{
-			"success": true,
-			"status":  "online",
+			"success":     true,
+			"status":      "online",
+			"mac_address": pendingMAC,
+			"device_id":   deviceID,
 		})
 	}
 
@@ -295,24 +297,27 @@ func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error":   "Invalid request body",
+			"error":   "Invalid request body: " + err.Error(),
 		})
 	}
 
 	// Validation
 	if input.HomeID == "" {
+		fmt.Println("ProvisionDeviceEndpoint 400: home_id is required")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error":   "home_id is required",
 		})
 	}
 	if input.MACAddress == "" && input.DeviceID == "" {
+		fmt.Println("ProvisionDeviceEndpoint 400: mac_address or device_id is required")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error":   "mac_address or device_id is required",
 		})
 	}
 	if input.Name == "" {
+		fmt.Println("ProvisionDeviceEndpoint 400: device name is required")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
 			"error":   "device name is required",
@@ -328,6 +333,7 @@ func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 	// Validate switch count matches device type for touch panels
 	if input.DeviceType == "touch_panel" {
 		if input.SwitchCount < 6 || input.SwitchCount > 8 {
+			fmt.Printf("ProvisionDeviceEndpoint 400: invalid switch count: %d\n", input.SwitchCount)
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"success": false,
 				"error":   "Touch panel switch count must be 6, 7, or 8",
