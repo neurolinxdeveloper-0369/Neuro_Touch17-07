@@ -177,10 +177,15 @@ class ProvisionNotifier extends StateNotifier<ProvisionState> {
     // Generate a temporary device ID from backend
     try {
       final tempId = await _deviceRepo.generateDeviceUuid();
-      // Fetch home credentials in parallel
-      final creds = await _deviceRepo.getHomeNetworkCredentials(homeId);
-      // Fetch floors for assignment step
-      final floors = await _deviceRepo.getHomeFloors(homeId);
+      
+      // Fetch home credentials and floors in parallel if homeId is provided
+      Map<String, String?> creds = {'ssid': null, 'password': null};
+      List<FloorModel> floors = [];
+      
+      if (homeId.isNotEmpty) {
+        creds = await _deviceRepo.getHomeNetworkCredentials(homeId);
+        floors = await _deviceRepo.getHomeFloors(homeId);
+      }
 
       state = state.copyWith(
         tempDeviceId: tempId,
