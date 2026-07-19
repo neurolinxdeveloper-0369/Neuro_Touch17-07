@@ -42,6 +42,7 @@ class _SoftApFlowScreenState extends ConsumerState<SoftApFlowScreen> {
           final homes = await ref.read(userHomesProvider.future);
           if (homes.isNotEmpty) {
             homeId = homes.first.id;
+            ref.read(homeIdProvider.notifier).state = homeId; // <--- FIX: Save it so AssignmentStep can read it
           }
         } catch (_) {}
       }
