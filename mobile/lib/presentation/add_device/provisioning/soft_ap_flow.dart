@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../controllers/provision.controller.dart';
-import '../../../controllers/home_setup.controller.dart';
+import '../../../controllers/dashboard.controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../data/models/floor.model.dart';
@@ -33,7 +33,7 @@ class _SoftApFlowScreenState extends ConsumerState<SoftApFlowScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final homeId = ref.read(activeHomeProvider)?.id ?? '';
+      final homeId = ref.read(homeIdProvider) ?? '';
       await ref
           .read(provisionControllerProvider.notifier)
           .initPanel(widget.panelNumber, homeId);
@@ -805,7 +805,7 @@ class _AssignmentStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(provisionControllerProvider);
-    final homeId = ref.read(activeHomeProvider)?.id ?? '';
+    final homeId = ref.read(homeIdProvider) ?? '';
 
     return _StepScaffold(
       isDark: isDark,
