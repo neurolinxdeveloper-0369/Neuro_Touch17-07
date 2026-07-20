@@ -58,8 +58,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   children: [
                     Image.asset(
                       'assets/images/logo_3547.png',
-                      width: 120,
-                      height: 120,
+                      width: 80,
+                      height: 80,
                     ),
                     const SizedBox(height: 24),
                     Text(
