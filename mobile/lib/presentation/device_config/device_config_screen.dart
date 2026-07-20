@@ -21,6 +21,24 @@ class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
   String _filter = 'all';
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final homeId = ref.read(homeIdProvider);
+      if (homeId != null && homeId.isNotEmpty) {
+        ref.read(dashboardControllerProvider.notifier).refreshDevices(homeId);
+      }
+    });
+  }
+
+  Future<void> _handleRefresh() async {
+    final homeId = ref.read(homeIdProvider);
+    if (homeId != null && homeId.isNotEmpty) {
+      await ref.read(dashboardControllerProvider.notifier).refreshDevices(homeId);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final devices = ref.watch(dashboardControllerProvider).devices;
     final mqttState = ref.watch(mqttControllerProvider);
@@ -48,23 +66,31 @@ class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: filtered.isEmpty
-                ? _EmptyDevices(isDark: isDark)
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final device = filtered[index];
-                      final isOnline = mqttState.isDeviceOnline(device.id);
-                      return _DeviceCard(
-                        device: device,
-                        isOnline: isOnline,
-                        onTap: () => context.push('/devices/${device.id}'),
-                      );
-                    },
-                  ),
+            child: RefreshIndicator(
+              onRefresh: _handleRefresh,
+              child: filtered.isEmpty
+                  ? Stack(
+                      children: [
+                        ListView(),
+                        _EmptyDevices(isDark: isDark),
+                      ],
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final device = filtered[index];
+                        final isOnline = mqttState.isDeviceOnline(device.id);
+                        return _DeviceCard(
+                          device: device,
+                          isOnline: isOnline,
+                          onTap: () => context.push('/devices/${device.id}'),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),
