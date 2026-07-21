@@ -11,6 +11,7 @@ const Color _offGrey = Color(0xFF333333); // Dark Grey for OFF state dot
 class CircularSwitch extends StatelessWidget {
   final bool isOn;
   final ValueChanged<bool>? onToggle;
+  final VoidCallback? onLongPress;
   final double size;
   final String? label;
 
@@ -18,6 +19,7 @@ class CircularSwitch extends StatelessWidget {
     super.key,
     required this.isOn,
     this.onToggle,
+    this.onLongPress,
     this.size = 72,
     this.label,
   });
@@ -39,6 +41,7 @@ class CircularSwitch extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: () => onToggle?.call(!isOn),
+          onLongPress: onLongPress,
           child: SizedBox(
             width: bezelSize,
             height: bezelSize,
@@ -201,6 +204,7 @@ class CircularSwitchGrid extends StatelessWidget {
   final Map<int, bool> switchStates; // index → isOn
   final Map<int, String> switchNames;
   final Function(int index, bool newState) onToggle;
+  final Function(int index)? onLongPress;
 
   const CircularSwitchGrid({
     super.key,
@@ -208,6 +212,7 @@ class CircularSwitchGrid extends StatelessWidget {
     required this.switchStates,
     required this.switchNames,
     required this.onToggle,
+    this.onLongPress,
   });
 
   @override
@@ -231,6 +236,7 @@ class CircularSwitchGrid extends StatelessWidget {
         return CircularSwitch(
           isOn: isOn,
           onToggle: (v) => onToggle(switchIndex, v),
+          onLongPress: onLongPress != null ? () => onLongPress!(switchIndex) : null,
           size: 68,
           label: label,
         );

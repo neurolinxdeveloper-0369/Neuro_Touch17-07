@@ -145,6 +145,17 @@ class _SwitchPanel extends ConsumerWidget {
           switchStates: switchStates,
           switchNames: switchNames,
           onToggle: (idx, state) => onToggle(idx, state),
+          onLongPress: (idx) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SwitchSettingsScreen(
+                  device: device,
+                  switchIndex: idx,
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
