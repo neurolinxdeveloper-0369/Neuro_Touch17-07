@@ -179,10 +179,25 @@ class MqttController extends StateNotifier<MqttState> {
     );
   }
 
-  void publishSwitchCommand(String deviceId, int switchIndex, bool state) {
+  void publishSwitchCommand(String deviceId, int switchIndex, bool stateValue) {
+    // Optimistic UI update
+    final currentValues = state.deviceValues[deviceId] ?? {};
+    final currentFeatureValues = currentValues['switch'] ?? {};
+    final newFeatureValues = Map<String, dynamic>.from(currentFeatureValues);
+    newFeatureValues['sw$switchIndex'] = stateValue;
+
+    final newDeviceValues = Map<String, Map<String, dynamic>>.from(currentValues);
+    newDeviceValues['switch'] = newFeatureValues;
+
+    final newGlobalValues = Map<String, Map<String, Map<String, dynamic>>>.from(state.deviceValues);
+    newGlobalValues[deviceId] = newDeviceValues;
+
+    state = state.copyWith(deviceValues: newGlobalValues);
+
+    // Send MQTT command
     publishCommand(deviceId, 'switch', {
       'switch_index': switchIndex,
-      'state': state,
+      'state': stateValue,
     });
   }
 

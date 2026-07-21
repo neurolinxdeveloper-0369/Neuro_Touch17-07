@@ -20,8 +20,8 @@ class CircularSwitch extends StatelessWidget {
     this.label,
   });
 
-  static const Color _blueOn = Color(0xFF2979FF);
-  static const Color _offRing = Color(0xFF3A3A4A);
+  static const Color _blueOn = Color(0xFF00A3FF); // Clean Blue
+  static const Color _offRing = Colors.white;
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +46,8 @@ class CircularSwitch extends StatelessWidget {
                         Colors.transparent,
                       ]
                     : [
-                        Colors.white.withOpacity(0.12),
-                        Colors.white.withOpacity(0.03),
+                        Colors.white.withOpacity(0.15),
+                        Colors.white.withOpacity(0.05),
                         Colors.transparent,
                       ],
                 stops: const [0.0, 0.6, 1.0],
@@ -68,13 +68,13 @@ class CircularSwitch extends StatelessWidget {
                     ]
                   : [
                       BoxShadow(
-                        color: Colors.white.withOpacity(0.25),
+                        color: Colors.white.withOpacity(0.3),
                         blurRadius: 16,
                         spreadRadius: 1,
                       ),
                     ],
               border: Border.all(
-                color: isOn ? _blueOn : _offRing,
+                color: isOn ? _blueOn : _offRing.withOpacity(0.6),
                 width: 2,
               ),
             ),
@@ -90,7 +90,7 @@ class CircularSwitch extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: isOn ? _blueOn : Colors.white60,
+              color: isOn ? _blueOn : Colors.white,
               letterSpacing: 0.3,
             ),
             child: Text(
@@ -123,11 +123,11 @@ class _SwitchInner extends StatelessWidget {
       height: innerSize,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isOn ? const Color(0xFF1A237E) : const Color(0xFF1C1C2E),
+        color: isOn ? _blueOn.withOpacity(0.2) : Colors.white.withOpacity(0.1),
         boxShadow: isOn
             ? [
                 BoxShadow(
-                  color: const Color(0xFF2979FF).withOpacity(0.5),
+                  color: _blueOn.withOpacity(0.5),
                   blurRadius: 12,
                   spreadRadius: 1,
                 ),
@@ -141,20 +141,20 @@ class _SwitchInner extends StatelessWidget {
           height: dotSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isOn ? const Color(0xFF2979FF) : Colors.white54,
+            color: isOn ? _blueOn : Colors.white,
             boxShadow: isOn
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF2979FF).withOpacity(0.9),
+                      color: _blueOn.withOpacity(0.9),
                       blurRadius: 8,
                       spreadRadius: 2,
                     ),
                   ]
                 : [
                     BoxShadow(
-                      color: Colors.white.withOpacity(0.4),
-                      blurRadius: 6,
-                      spreadRadius: 1,
+                      color: Colors.white.withOpacity(0.8),
+                      blurRadius: 8,
+                      spreadRadius: 2,
                     ),
                   ],
           ),
