@@ -72,6 +72,13 @@ class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String?>(homeIdProvider, (previous, next) {
+      if (next != null && next != previous) {
+        print('DEBUG DeviceConfigScreen: homeId changed to $next. Fetching devices...');
+        ref.read(dashboardControllerProvider.notifier).refreshDevices(next);
+      }
+    });
+
     final devices = ref.watch(dashboardControllerProvider).devices;
     final mqttState = ref.watch(mqttControllerProvider);
     final isDark = context.isDark;

@@ -27,9 +27,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _loadDashboard() async {
-    final homeId = ref.read(homeIdProvider);
+    // If homeIdProvider is already set, just load it
+    var homeId = ref.read(homeIdProvider);
     if (homeId != null) {
       await ref.read(dashboardControllerProvider.notifier).loadDashboard(homeId);
+      return;
+    }
+
+    // Otherwise, wait for userHomesProvider and pick the first one
+    try {
+      final homes = await ref.read(userHomesProvider.future);
+      if (homes.isNotEmpty && mounted) {
+        final firstHomeId = homes.first.id;
+        ref.read(homeIdProvider.notifier).state = firstHomeId;
+        await ref.read(dashboardControllerProvider.notifier).loadDashboard(firstHomeId);
+      }
+    } catch (e) {
+      print('DEBUG DashboardScreen: Error loading initial homes: $e');
     }
   }
 
