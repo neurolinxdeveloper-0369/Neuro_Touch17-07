@@ -18,12 +18,13 @@ class DeviceConfigScreen extends ConsumerStatefulWidget {
 }
 
 class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
-  String _filter = 'all';
+  String _filter = 'outdoor';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('DEBUG DeviceConfigScreen: initState called. Fetching devices...');
       final homeId = ref.read(homeIdProvider);
       if (homeId != null && homeId.isNotEmpty) {
         ref.read(dashboardControllerProvider.notifier).refreshDevices(homeId);
@@ -32,6 +33,7 @@ class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
   }
 
   Future<void> _handleRefresh() async {
+    print('DEBUG DeviceConfigScreen: _handleRefresh called');
     final homeId = ref.read(homeIdProvider);
     if (homeId != null && homeId.isNotEmpty) {
       await ref.read(dashboardControllerProvider.notifier).refreshDevices(homeId);
@@ -43,10 +45,17 @@ class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
     final devices = ref.watch(dashboardControllerProvider).devices;
     final mqttState = ref.watch(mqttControllerProvider);
     final isDark = context.isDark;
+    
+    print('DEBUG DeviceConfigScreen: build called. Current devices count: ${devices.length}');
 
-    final filtered = _filter == 'all'
-        ? devices
-        : devices.where((d) => d.deviceType.apiValue == _filter).toList();
+    final filtered = devices.where((d) {
+      if (_filter == 'outdoor') return d.assignmentType == 'outdoor';
+      if (_filter == 'touch_panel') return d.deviceType.apiValue == 'touch_panel';
+      if (_filter == '8') return d.switchCount == 8;
+      return false;
+    }).toList();
+    
+    print('DEBUG DeviceConfigScreen: filtered devices count: ${filtered.length} for filter $_filter');
 
     return AppScreenWrapper(
       title: 'Devices',
@@ -107,12 +116,9 @@ class _DeviceTypeFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final filters = [
-      ('all', 'All'),
-      ('touch_panel', 'Touch'),
-      ('ir_blaster', 'Remote'),
-      ('lift_panel', 'Lift'),
-      ('energy_meter', 'Energy'),
-      ('temp_monitor', 'Climate'),
+      ('outdoor', 'Outdoor'),
+      ('touch_panel', 'Touch Panel'),
+      ('8', '8 Switches'),
     ];
 
     return SizedBox(

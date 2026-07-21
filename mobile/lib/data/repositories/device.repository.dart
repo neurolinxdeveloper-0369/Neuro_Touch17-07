@@ -14,12 +14,31 @@ class DeviceRepository {
   // ─── Devices ──────────────────────────────────────────────
 
   Future<List<DeviceModel>> getHomeDevices(String homeId) async {
-    final resp = await _api.get(ApiConstants.homeDevices(homeId));
-    final data = resp.data as Map<String, dynamic>;
-    if (data['success'] != true) throw Exception(data['error']);
-    return (data['devices'] as List<dynamic>)
-        .map((d) => DeviceModel.fromJson(d as Map<String, dynamic>))
-        .toList();
+    print('DEBUG: Fetching devices for homeId: $homeId');
+    try {
+      final resp = await _api.get(ApiConstants.homeDevices(homeId));
+      print('DEBUG: API Response status: ${resp.statusCode}');
+      print('DEBUG: API Response data: ${resp.data}');
+      
+      final data = resp.data as Map<String, dynamic>;
+      if (data['success'] != true) throw Exception(data['error']);
+      
+      final rawDevices = data['devices'] as List<dynamic>;
+      print('DEBUG: Found ${rawDevices.length} raw devices');
+      
+      final parsed = rawDevices
+          .map((d) {
+            print('DEBUG: Parsing device: $d');
+            return DeviceModel.fromJson(d as Map<String, dynamic>);
+          })
+          .toList();
+      print('DEBUG: Successfully parsed ${parsed.length} devices');
+      return parsed;
+    } catch (e, stackTrace) {
+      print('DEBUG: getHomeDevices ERROR: $e');
+      print('DEBUG: StackTrace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<DeviceModel> getDevice(String deviceId) async {
