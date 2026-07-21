@@ -81,7 +81,7 @@ class ProvisionState {
   const ProvisionState({
     this.step = ProvisionStep.panelSelected,
     this.panelNumber = 6,
-    this.expectedSsid = 'Rollin_Lift_Panel_6',
+    this.expectedSsid = 'Neuro_Touch_6S',
     this.tempDeviceId = '',
     this.macAddress = '',
     this.homeSsid,
@@ -162,7 +162,7 @@ class ProvisionNotifier extends StateNotifier<ProvisionState> {
 
   /// Returns expected SSID for a given panel number.
   static String ssidForPanel(int panelNumber) =>
-      'Rollin_Lift_Panel_$panelNumber';
+      'Neuro_Touch_${panelNumber}S';
 
   /// Call this first when user selects a panel on the add-device screen.
   Future<void> initPanel(int panelNumber, String homeId) async {
