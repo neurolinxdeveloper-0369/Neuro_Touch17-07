@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'package:flutter/services.dart';
 
 import '../../data/models/device.model.dart';
+import '../../data/repositories/device.repository.dart';
 import '../../controllers/dashboard.controller.dart';
-import '../../core/constants/api_constants.dart';
 
 class ApplianceTypeInfo {
   final String id;
@@ -78,33 +75,21 @@ class _SwitchSettingsScreenState extends ConsumerState<SwitchSettingsScreen> {
   Future<void> _updateSwitch() async {
     setState(() => _isLoading = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-      
-      final response = await http.put(
-        Uri.parse('${ApiConstants.baseUrl}/devices/${widget.device.id}/switches/${widget.switchIndex}'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'name': _nameController.text.trim(),
-          'icon': _selectedIconId,
-        }),
+      await ref.read(deviceRepositoryProvider).updateSwitch(
+        widget.device.id,
+        widget.switchIndex,
+        name: _nameController.text.trim(),
+        icon: _selectedIconId,
       );
 
-      if (response.statusCode == 200) {
-        // Refresh devices to get updated switch names
-        ref.read(dashboardControllerProvider.notifier).fetchDevices();
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Switch updated successfully')),
-          );
-          context.pop();
-        }
-      } else {
-        throw Exception('Failed to update switch');
+      // Refresh devices to get updated switch names
+      ref.read(dashboardControllerProvider.notifier).refreshDevices(widget.device.homeId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Switch updated successfully')),
+        );
+        context.pop();
       }
     } catch (e) {
       if (mounted) {
