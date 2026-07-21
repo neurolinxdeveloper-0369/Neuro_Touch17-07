@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 const Color _blueOn = Color(0xFF00A3FF); // Clean Blue
-const Color _offRing = Colors.white;
+const Color _offGrey = Color(0xFF9E9E9E); // Grey for OFF state
 
 /// A circular power switch with a glowing center dot.
 ///
 /// - **Blue glow** when [isOn] is `true`
-/// - **White glow** when [isOn] is `false`
+/// - **Grey glow** when [isOn] is `false`
 /// - Smooth animated transition between states
 /// - Tappable: calls [onToggle] with the new state
 class CircularSwitch extends StatelessWidget {
@@ -25,6 +25,9 @@ class CircularSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? Colors.white : Colors.black;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -46,8 +49,8 @@ class CircularSwitch extends StatelessWidget {
                         Colors.transparent,
                       ]
                     : [
-                        Colors.white.withOpacity(0.15),
-                        Colors.white.withOpacity(0.05),
+                        _offGrey.withOpacity(0.15),
+                        _offGrey.withOpacity(0.05),
                         Colors.transparent,
                       ],
                 stops: const [0.0, 0.6, 1.0],
@@ -68,14 +71,14 @@ class CircularSwitch extends StatelessWidget {
                     ]
                   : [
                       BoxShadow(
-                        color: Colors.white.withOpacity(0.3),
+                        color: _offGrey.withOpacity(0.3),
                         blurRadius: 16,
                         spreadRadius: 1,
                       ),
                     ],
               border: Border.all(
-                color: isOn ? _blueOn : _offRing.withOpacity(0.6),
-                width: 2,
+                color: borderColor,
+                width: 0.5,
               ),
             ),
             child: Center(
@@ -90,7 +93,7 @@ class CircularSwitch extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: isOn ? _blueOn : Colors.white,
+              color: isOn ? _blueOn : _offGrey,
               letterSpacing: 0.3,
             ),
             child: Text(
@@ -123,7 +126,7 @@ class _SwitchInner extends StatelessWidget {
       height: innerSize,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isOn ? _blueOn.withOpacity(0.2) : Colors.white.withOpacity(0.1),
+        color: isOn ? _blueOn.withOpacity(0.2) : _offGrey.withOpacity(0.1),
         boxShadow: isOn
             ? [
                 BoxShadow(
@@ -141,7 +144,7 @@ class _SwitchInner extends StatelessWidget {
           height: dotSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isOn ? _blueOn : Colors.white,
+            color: isOn ? _blueOn : _offGrey,
             boxShadow: isOn
                 ? [
                     BoxShadow(
@@ -152,7 +155,7 @@ class _SwitchInner extends StatelessWidget {
                   ]
                 : [
                     BoxShadow(
-                      color: Colors.white.withOpacity(0.8),
+                      color: _offGrey.withOpacity(0.8),
                       blurRadius: 8,
                       spreadRadius: 2,
                     ),
