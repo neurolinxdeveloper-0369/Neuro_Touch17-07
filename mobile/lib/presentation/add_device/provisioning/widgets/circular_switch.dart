@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+const Color _blueOn = Color(0xFF00A3FF); // Clean Blue
+const Color _offRing = Colors.white;
+
 /// A circular power switch with a glowing center dot.
 ///
 /// - **Blue glow** when [isOn] is `true`
@@ -19,9 +22,6 @@ class CircularSwitch extends StatelessWidget {
     this.size = 72,
     this.label,
   });
-
-  static const Color _blueOn = Color(0xFF00A3FF); // Clean Blue
-  static const Color _offRing = Colors.white;
 
   @override
   Widget build(BuildContext context) {
