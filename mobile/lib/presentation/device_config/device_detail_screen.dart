@@ -128,10 +128,12 @@ class _SwitchPanel extends ConsumerWidget {
     // Build switch state map from MQTT values
     final Map<int, bool> switchStates = {};
     final Map<int, String> switchNames = {};
+    final Map<int, String> switchIcons = {};
     for (final sw in device.switches) {
       switchStates[sw.switchIndex] =
           mqttState.getDeviceValue(device.id, 'switch', 'sw${sw.switchIndex}') as bool? ?? false;
       switchNames[sw.switchIndex] = sw.name;
+      switchIcons[sw.switchIndex] = sw.icon;
     }
 
     return Column(
@@ -145,6 +147,7 @@ class _SwitchPanel extends ConsumerWidget {
           switchCount: device.switchCount,
           switchStates: switchStates,
           switchNames: switchNames,
+          switchIcons: switchIcons,
           onToggle: (idx, state) => onToggle(idx, state),
           onLongPress: (idx) {
             Navigator.push(

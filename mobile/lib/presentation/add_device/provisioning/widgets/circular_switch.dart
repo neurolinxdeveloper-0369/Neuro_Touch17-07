@@ -14,6 +14,7 @@ class CircularSwitch extends StatelessWidget {
   final VoidCallback? onLongPress;
   final double size;
   final String? label;
+  final String? icon;
 
   const CircularSwitch({
     super.key,
@@ -22,6 +23,7 @@ class CircularSwitch extends StatelessWidget {
     this.onLongPress,
     this.size = 72,
     this.label,
+    this.icon,
   });
 
   @override
@@ -92,7 +94,7 @@ class CircularSwitch extends StatelessWidget {
                 ),
 
                 // Center Icon
-                _WallSwitchIcon(isOn: isOn),
+                _WallSwitchIcon(isOn: isOn, iconId: icon),
 
                 // Indicator Dot
                 Align(
@@ -154,11 +156,38 @@ class CircularSwitch extends StatelessWidget {
 
 class _WallSwitchIcon extends StatelessWidget {
   final bool isOn;
-  const _WallSwitchIcon({required this.isOn});
+  final String? iconId;
+  const _WallSwitchIcon({required this.isOn, this.iconId});
+
+  IconData? _getIconData(String? id) {
+    switch (id) {
+      case 'lightbulb': return Icons.lightbulb_outline;
+      case 'fan': return Icons.wind_power;
+      case 'ac': return Icons.ac_unit;
+      case 'tv': return Icons.tv;
+      case 'socket': return Icons.outlet;
+      case 'speaker': return Icons.speaker;
+      case 'router': return Icons.router;
+      case 'heater': return Icons.thermostat;
+      default: return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final color = isOn ? _blueOn : Colors.white.withOpacity(0.3);
+    final mappedIcon = _getIconData(iconId);
+
+    if (mappedIcon != null) {
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        child: Icon(
+          mappedIcon,
+          color: color,
+          size: 28,
+        ),
+      );
+    }
     
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -203,6 +232,7 @@ class CircularSwitchGrid extends StatelessWidget {
   final int switchCount; // 6, 7, or 8
   final Map<int, bool> switchStates; // index → isOn
   final Map<int, String> switchNames;
+  final Map<int, String>? switchIcons;
   final Function(int index, bool newState) onToggle;
   final Function(int index)? onLongPress;
 
@@ -211,6 +241,7 @@ class CircularSwitchGrid extends StatelessWidget {
     required this.switchCount,
     required this.switchStates,
     required this.switchNames,
+    this.switchIcons,
     required this.onToggle,
     this.onLongPress,
   });
@@ -233,12 +264,14 @@ class CircularSwitchGrid extends StatelessWidget {
         final switchIndex = index + 1;
         final isOn = switchStates[switchIndex] ?? false;
         final label = switchNames[switchIndex] ?? 'Switch $switchIndex';
+        final icon = switchIcons?[switchIndex];
         return CircularSwitch(
           isOn: isOn,
           onToggle: (v) => onToggle(switchIndex, v),
           onLongPress: onLongPress != null ? () => onLongPress!(switchIndex) : null,
           size: 68,
           label: label,
+          icon: icon,
         );
       },
     );
