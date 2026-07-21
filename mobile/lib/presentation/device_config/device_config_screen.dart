@@ -18,7 +18,7 @@ class DeviceConfigScreen extends ConsumerStatefulWidget {
 }
 
 class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
-  String _filter = 'outdoor';
+  String _filter = 'all';
 
   @override
   void initState() {
@@ -40,6 +40,36 @@ class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
     }
   }
 
+  List<(String, String)> _buildDynamicFilters(List<DeviceModel> devices) {
+    final filters = <(String, String)>[('all', 'All')];
+    final Set<String> addedFilters = {'all'};
+
+    for (final d in devices) {
+      // Assignment Type (e.g. outdoor, room)
+      if (d.assignmentType.isNotEmpty && !addedFilters.contains(d.assignmentType)) {
+        // Simple capitalize
+        final display = d.assignmentType[0].toUpperCase() + d.assignmentType.substring(1);
+        filters.add((d.assignmentType, display));
+        addedFilters.add(d.assignmentType);
+      }
+
+      // Device Type (e.g. touch_panel -> Touch Panel)
+      if (!addedFilters.contains(d.deviceType.apiValue)) {
+        filters.add((d.deviceType.apiValue, d.deviceType.displayName));
+        addedFilters.add(d.deviceType.apiValue);
+      }
+
+      // Switch Count (e.g. 8 -> 8 Switches)
+      final switchCountStr = '${d.switchCount}';
+      if (!addedFilters.contains(switchCountStr)) {
+        filters.add((switchCountStr, '${d.switchCount} Switches'));
+        addedFilters.add(switchCountStr);
+      }
+    }
+    
+    return filters;
+  }
+
   @override
   Widget build(BuildContext context) {
     final devices = ref.watch(dashboardControllerProvider).devices;
@@ -48,14 +78,24 @@ class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
     
     print('DEBUG DeviceConfigScreen: build called. Current devices count: ${devices.length}');
 
-    final filtered = devices.where((d) {
-      if (_filter == 'outdoor') return d.assignmentType == 'outdoor';
-      if (_filter == 'touch_panel') return d.deviceType.apiValue == 'touch_panel';
-      if (_filter == '8') return d.switchCount == 8;
-      return false;
-    }).toList();
+    final filtered = _filter == 'all'
+        ? devices
+        : devices.where((d) {
+            return d.assignmentType == _filter || 
+                   d.deviceType.apiValue == _filter || 
+                   '${d.switchCount}' == _filter;
+          }).toList();
     
     print('DEBUG DeviceConfigScreen: filtered devices count: ${filtered.length} for filter $_filter');
+
+    final dynamicFilters = _buildDynamicFilters(devices);
+
+    // If the current filter is not in the dynamic list (e.g. all devices matching it were removed), reset to 'all'
+    if (!dynamicFilters.any((f) => f.$1 == _filter)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _filter = 'all');
+      });
+    }
 
     return AppScreenWrapper(
       title: 'Devices',
@@ -71,6 +111,7 @@ class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
           const SizedBox(height: 12),
           _DeviceTypeFilter(
             currentFilter: _filter,
+            filters: dynamicFilters,
             onFilterChanged: (f) => setState(() => _filter = f),
           ),
           const SizedBox(height: 16),
@@ -109,18 +150,17 @@ class _DeviceConfigScreenState extends ConsumerState<DeviceConfigScreen> {
 
 class _DeviceTypeFilter extends StatelessWidget {
   final String currentFilter;
+  final List<(String, String)> filters;
   final ValueChanged<String> onFilterChanged;
 
-  const _DeviceTypeFilter({required this.currentFilter, required this.onFilterChanged});
+  const _DeviceTypeFilter({
+    required this.currentFilter, 
+    required this.filters, 
+    required this.onFilterChanged
+  });
 
   @override
   Widget build(BuildContext context) {
-    final filters = [
-      ('outdoor', 'Outdoor'),
-      ('touch_panel', 'Touch Panel'),
-      ('8', '8 Switches'),
-    ];
-
     return SizedBox(
       height: 40,
       child: ListView.separated(
