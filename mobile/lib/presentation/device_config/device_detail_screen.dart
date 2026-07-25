@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'switch_settings_screen.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../controllers/dashboard.controller.dart';
 import '../../controllers/mqtt.controller.dart';
@@ -125,28 +126,16 @@ class _SwitchPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mqttState = ref.watch(mqttControllerProvider);
 
-    // Build switch state map from MQTT values.
-    // If device.switches is empty (just provisioned, configs not yet loaded),
-    // fall back to index-based defaults so toggles work immediately.
-    final Map<int, bool> switchStates = {};
-    final Map<int, String> switchNames = {};
-    final Map<int, String> switchIcons = {};
-
-    if (device.switches.isNotEmpty) {
-      for (final sw in device.switches) {
-        switchStates[sw.switchIndex] =
-            mqttState.getDeviceValue(device.id, 'switch', 'sw${sw.switchIndex}') as bool? ?? false;
-        switchNames[sw.switchIndex] = sw.name;
-        switchIcons[sw.switchIndex] = sw.icon;
-      }
-    } else {
-      // Freshly provisioned — no switch configs yet. Use defaults.
-      for (int i = 1; i <= device.switchCount; i++) {
-        switchStates[i] =
-            mqttState.getDeviceValue(device.id, 'switch', 'sw$i') as bool? ?? false;
-        switchNames[i] = 'Switch $i';
-        switchIcons[i] = 'lightbulb';
-      }
+    // Always iterate 1..switchCount so every switch gets an MQTT binding.
+    // If a switch has a saved config, use its name/icon.
+    // If not (newly provisioned or not yet configured), fall back to defaults.
+    // This ensures ALL switches toggle correctly, even when only some have configs.
+    for (int i = 1; i <= device.switchCount; i++) {
+      final config = device.switches.firstWhereOrNull((s) => s.switchIndex == i);
+      switchStates[i] =
+          mqttState.getDeviceValue(device.id, 'switch', 'sw$i') as bool? ?? false;
+      switchNames[i] = config?.name ?? 'Switch $i';
+      switchIcons[i] = config?.icon ?? 'lightbulb';
     }
 
     return Column(
