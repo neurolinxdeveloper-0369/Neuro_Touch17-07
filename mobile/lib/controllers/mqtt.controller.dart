@@ -281,6 +281,40 @@ class MqttController extends StateNotifier<MqttState> {
       'motor_id': motorId,
     };
     
+    // Optimistic UI Update
+    final currentValues = state.deviceFeatures[deviceId] ?? {};
+    final currentGasValues = currentValues['gas'] ?? {};
+    final currentMotors = currentGasValues['motors'] as List? ?? [];
+    
+    List<Map<String, dynamic>> newMotors = [];
+    bool found = false;
+    for (var m in currentMotors) {
+      if (m['id'] == motorId || m['id'] == motorId.toString()) {
+        final newM = Map<String, dynamic>.from(m);
+        newM['state'] = value;
+        newMotors.add(newM);
+        found = true;
+      } else {
+        newMotors.add(Map<String, dynamic>.from(m));
+      }
+    }
+    if (!found) {
+      newMotors.add({'id': motorId, 'state': value});
+    }
+
+    final newFeatureValues = Map<String, dynamic>.from(currentGasValues);
+    newFeatureValues['motors'] = newMotors;
+
+    final newDeviceValues = Map<String, Map<String, dynamic>>.from(currentValues);
+    newDeviceValues['gas'] = newFeatureValues;
+
+    final newGlobalValues = Map<String, Map<String, Map<String, dynamic>>>.from(state.deviceFeatures);
+    newGlobalValues[deviceId] = newDeviceValues;
+
+    state = state.copyWith(deviceFeatures: newGlobalValues);
+
+    debugPrint('📱 [DEBUG] App requested Gas Motor $motorId to $value');
+
     // Publish directly to hardware specific topic
     _mqttService.publish(
       'cmd/stove/$deviceId/control',

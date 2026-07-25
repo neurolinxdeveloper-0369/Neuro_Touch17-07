@@ -64,7 +64,22 @@ func InitMqtt() {
 	// Link controller's publishing stub to the real MQTT client
 	controllers.MqttPublish = func(topic string, payload string) {
 		log.Printf("🖥️ [SERVER CONSOLE] App sent command via HTTP to topic %s: %s", topic, payload)
-		
+
+		// If sending a command to a gas controller, route to its specific topic
+		if strings.HasPrefix(topic, "nt/v1/") && strings.HasSuffix(topic, "/cmd/gas_control") {
+			parts := strings.Split(topic, "/")
+			if len(parts) >= 3 {
+				deviceID := parts[2]
+				var dev models.Device
+				if err := config.AppConfig.DB.Where("id = ?", deviceID).First(&dev).Error; err == nil {
+					if dev.DeviceType == "gas_control" {
+						// Transform to gas controller topic
+						topic = fmt.Sprintf("cmd/stove/%s/control", deviceID)
+					}
+				}
+			}
+		}
+
 		// [SIMULATOR] Fallback since hardware cannot connect to update DB
 		parts := strings.Split(topic, "/")
 		if len(parts) >= 5 && parts[4] == "state" {
@@ -92,20 +107,18 @@ func InitMqtt() {
 					}
 				}
 			}
-		}
-
-		// If sending a command to a gas controller, route to its specific topic
-		if strings.HasPrefix(topic, "nt/v1/") && strings.HasSuffix(topic, "/cmd/state") {
-			parts := strings.Split(topic, "/")
-			if len(parts) >= 3 {
-				deviceID := parts[2]
-				var dev models.Device
-				if err := config.AppConfig.DB.Where("id = ?", deviceID).First(&dev).Error; err == nil {
-					if dev.DeviceType == "gas_control" {
-						// Transform to gas controller topic
-						topic = fmt.Sprintf("cmd/stove/%s/control", deviceID)
-					}
-				}
+		} else if len(parts) >= 4 && parts[0] == "cmd" && parts[1] == "stove" {
+			deviceID := parts[2]
+			var parsed struct {
+				Action  string `json:"action"`
+				Value   string `json:"value"`
+				MotorID int    `json:"motor_id"`
+			}
+			if err := json.Unmarshal([]byte(payload), &parsed); err == nil {
+				config.AppConfig.DB.Model(&models.GasMotor{}).
+					Where("device_id = ? AND motor_id = ?", deviceID, parsed.MotorID).
+					Update("state", parsed.Value)
+				log.Printf("💾 [DB SIMULATOR] Saved gas state %s for motor %d to database", parsed.Value, parsed.MotorID)
 			}
 		}
 
