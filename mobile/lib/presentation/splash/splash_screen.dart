@@ -63,7 +63,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Neuro Touch',
+                      'Rollin Techno',
                       style: AppTypography.h1.copyWith(color: Colors.white, letterSpacing: 2),
                     ),
                     const SizedBox(height: 8),

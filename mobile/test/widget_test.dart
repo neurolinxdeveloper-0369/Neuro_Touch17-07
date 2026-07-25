@@ -32,7 +32,7 @@ void main() {
     await StorageService.init();
   });
 
-  testWidgets('Neuro Touch app smoke test', (WidgetTester tester) async {
+  testWidgets('Rollin Techno app smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(
       const ProviderScope(child: NeuroTouchApp()),

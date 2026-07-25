@@ -126,7 +126,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
           return WebViewScreen(
             url: extra['url'] as String? ?? 'https://neurotouch.in',
-            title: extra['title'] as String? ?? 'Neuro Touch',
+            title: extra['title'] as String? ?? 'Rollin Techno',
           );
         },
       ),

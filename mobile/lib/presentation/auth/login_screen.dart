@@ -107,7 +107,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Neuro Touch',
+                            'Rollin Techno',
                             style: AppTypography.h2.copyWith(
                               letterSpacing: 1.2,
                               color: AppColors.textPrimary(isDark),

@@ -76,7 +76,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   Text('New Password', style: AppTypography.h1),
                   const SizedBox(height: 12),
                   Text(
-                    'Create a secure password for your Neuro Touch account',
+                    'Create a secure password for your Rollin Techno account',
                     style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary(isDark)),
                   ),
                   const SizedBox(height: 40),

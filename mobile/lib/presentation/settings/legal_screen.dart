@@ -43,13 +43,13 @@ class LegalScreen extends StatelessWidget {
   List<Widget> _termsContent(bool isDark) {
     return [
       _section('1. Acceptance of Terms', 
-          'By downloading or using the Neuro Touch app, these terms will automatically apply to you. You should make sure therefore that you read them carefully before using the app.'),
+          'By downloading or using the Rollin Techno app, these terms will automatically apply to you. You should make sure therefore that you read them carefully before using the app.'),
       _section('2. Usage License', 
-          'Neuro Touch grants you a personal, non-exclusive, non-transferable, limited license to use the App for your personal, non-commercial purposes strictly in accordance with the terms of this License.'),
+          'Rollin Techno grants you a personal, non-exclusive, non-transferable, limited license to use the App for your personal, non-commercial purposes strictly in accordance with the terms of this License.'),
       _section('3. IoT Device Control', 
-          'The app allows you to control Neuro Touch smart home hardware. You are responsible for ensuring that the installation of such hardware complies with local safety regulations. Neuro Touch is not liable for damages resulting from improper hardware installation or network failures.'),
+          'The app allows you to control Rollin Techno smart home hardware. You are responsible for ensuring that the installation of such hardware complies with local safety regulations. Rollin Techno is not liable for damages resulting from improper hardware installation or network failures.'),
       _section('4. Prohibited Actions', 
-          'You are not allowed to attempt to extract the source code of the app, translate the app into other languages, or make derivative versions. The app itself, and all the trademarks, copyright, database rights and other intellectual property rights related to it, still belong to Neuro Touch.'),
+          'You are not allowed to attempt to extract the source code of the app, translate the app into other languages, or make derivative versions. The app itself, and all the trademarks, copyright, database rights and other intellectual property rights related to it, still belong to Rollin Techno.'),
       _section('5. Service Modifications', 
           'We are committed to ensuring that the app is as useful and efficient as possible. For that reason, we reserve the right to make changes to the app or to charge for its services, at any time and for any reason.'),
     ];
