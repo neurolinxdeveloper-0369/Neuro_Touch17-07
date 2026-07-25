@@ -102,6 +102,18 @@ class MqttController extends StateNotifier<MqttState> {
     final deviceId = parts[2];
     final direction = parts[3];
 
+    // Handle Gas Stove Controller specific topics
+    if (parts.length >= 4 && parts[0] == 'tele' && parts[1] == 'stove') {
+      _updateLastSeen(deviceId);
+      if (direction == 'lwt') {
+        _handleDeviceStatus(deviceId, msg.payload);
+      } else if (direction == 'status') {
+        // payload contains 'motors' array, extract it as telemetry/state
+        _handleTelemetry(deviceId, 'gas', msg.payload);
+      }
+      return;
+    }
+
     // Update last seen for ANY message from device
     _updateLastSeen(deviceId);
 
@@ -259,6 +271,31 @@ class MqttController extends StateNotifier<MqttState> {
 
   void publishLiftCommand(String deviceId, String command) {
     publishCommand(deviceId, 'lift', {'command': command});
+  }
+
+  void publishGasCommand(String deviceId, String action, String value, int motorId) {
+    final payload = {
+      'msg_id': 'app-req-${DateTime.now().millisecondsSinceEpoch}',
+      'action': action,
+      'value': value,
+      'motor_id': motorId,
+    };
+    
+    // Publish directly to hardware specific topic
+    _mqttService.publish(
+      'cmd/stove/$deviceId/control',
+      payload,
+    );
+    
+    // Also send via backend HTTP in case we're off-network and need proxying
+    try {
+      ApiClient.instance.post('/devices/$deviceId/command', data: {
+        'feature': 'gas_control',
+        'payload': payload,
+      });
+    } catch(e) {
+      debugPrint('HTTP error: $e');
+    }
   }
 
   @override

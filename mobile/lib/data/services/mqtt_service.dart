@@ -83,6 +83,8 @@ class MqttService {
     _subscribe(MqttConstants.allDevicesTelemetry, MqttQos.atMostOnce);
     _subscribe(MqttConstants.allDevicesStatus, MqttQos.atLeastOnce);
     _subscribe(MqttConstants.allDevicesHeartbeat, MqttQos.atLeastOnce);
+    _subscribe(MqttConstants.allGasStatus, MqttQos.atLeastOnce);
+    _subscribe(MqttConstants.allGasLwt, MqttQos.atLeastOnce);
 
     // Listen to messages
     _client!.updates?.listen((events) {

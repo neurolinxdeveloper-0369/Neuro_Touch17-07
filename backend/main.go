@@ -35,6 +35,7 @@ func main() {
 		&models.Schedule{},
 		&models.Telemetry{},
 		&models.Notification{},
+		&models.GasMotor{},
 	)
 	if err != nil {
 		log.Fatalf("Failed database migration: %v", err)

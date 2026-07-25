@@ -71,7 +71,7 @@ type Room struct {
 type Device struct {
 	ID             string         `gorm:"primaryKey;type:varchar(50)" json:"id"` // MAC address (AA:BB:CC:DD:EE:FF) or temp UUID
 	HomeID         string         `gorm:"type:uuid;not null" json:"home_id"`
-	DeviceType     string         `gorm:"type:varchar(30);not null" json:"device_type"` // touch_panel | ir_blaster | lift_panel | energy_meter | temp_monitor
+	DeviceType     string         `gorm:"type:varchar(30);not null" json:"device_type"` // touch_panel | ir_blaster | lift_panel | energy_meter | temp_monitor | gas_control
 	Name           string         `gorm:"not null" json:"name"`
 	MACAddress     *string        `gorm:"type:varchar(17);uniqueIndex;column:mac_address" json:"mac_address"` // e.g. AA:BB:CC:DD:EE:FF
 	SSIDPattern    *string        `gorm:"type:varchar(100)" json:"ssid_pattern"`
@@ -136,4 +136,24 @@ type Notification struct {
 	IsRead    bool      `gorm:"default:false" json:"is_read"`
 	DeviceID  *string   `gorm:"type:varchar(50)" json:"device_id"`
 	CreatedAt time.Time `gorm:"default:now()" json:"created_at"`
+}
+
+type GasMotor struct {
+	ID          string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	DeviceID    string    `gorm:"type:varchar(50);not null;index" json:"device_id"`
+	MotorID     int       `gorm:"not null" json:"motor_id"`
+	Detected    bool      `gorm:"default:true" json:"detected"`
+	Pos         int       `gorm:"default:0" json:"pos"`
+	Deg         float32   `gorm:"type:real;default:0" json:"deg"`
+	Percent     int       `gorm:"default:0" json:"percent"`
+	State       string    `gorm:"type:varchar(10);default:'off'" json:"state"` // off, high, med, low
+	Moving      bool      `gorm:"default:false" json:"moving"`
+	Torque      bool      `gorm:"default:false" json:"torque"`
+	Voltage     float32   `gorm:"type:real;default:0" json:"voltage"`
+	Temper      int       `gorm:"default:0" json:"temper"`
+	PresetOff   int       `gorm:"default:2047" json:"preset_off"`
+	PresetLow   int       `gorm:"default:1600" json:"preset_low"`
+	PresetMed   int       `gorm:"default:1750" json:"preset_med"`
+	PresetHigh  int       `gorm:"default:1900" json:"preset_high"`
+	UpdatedAt   time.Time `gorm:"default:now()" json:"updated_at"`
 }

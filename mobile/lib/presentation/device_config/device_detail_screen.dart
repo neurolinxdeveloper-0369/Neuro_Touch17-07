@@ -280,61 +280,247 @@ class _CircleMetric extends StatelessWidget {
   }
 }
 
-class _GasControlPanel extends StatelessWidget {
+class _GasControlPanel extends StatefulWidget {
   final String deviceId;
   final MqttState mqttState;
 
   const _GasControlPanel({required this.deviceId, required this.mqttState});
 
   @override
+  State<_GasControlPanel> createState() => _GasControlPanelState();
+}
+
+class _GasControlPanelState extends State<_GasControlPanel> {
+  // Ordered as physically present on the stove: OFF -> HIGH -> MED -> LOW
+  final List<String> states = ['OFF', 'HIGH', 'MED', 'LOW'];
+
+  double _getRotationForState(String state) {
+    switch (state.toUpperCase()) {
+      case 'OFF': return -0.35; // turns (-126 degrees)
+      case 'HIGH': return -0.12; // turns (-43 degrees)
+      case 'MED': return 0.12; // turns (43 degrees)
+      case 'LOW': return 0.35; // turns (126 degrees)
+      default: return -0.35;
+    }
+  }
+
+  Color _getColorForState(String state) {
+    switch (state.toUpperCase()) {
+      case 'OFF': return Colors.grey.shade400;
+      case 'HIGH': return Colors.redAccent;
+      case 'MED': return Colors.orangeAccent;
+      case 'LOW': return Colors.amber;
+      default: return Colors.grey;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
     
-    // Fallback static UI for now as requested. MQTT/Backend will be integrated later.
-    // The device supports off, low, med, high states.
-    final List<String> states = ['OFF', 'LOW', 'MED', 'HIGH'];
-    final String currentState = 'OFF';
+    // Read state from MQTT telemetry if available
+    final gasFeature = widget.mqttState.getFeatureMap(widget.deviceId, 'gas');
+    String currentState = 'OFF';
+    if (gasFeature.isNotEmpty && gasFeature['motors'] != null) {
+      try {
+        final motors = gasFeature['motors'] as List;
+        if (motors.isNotEmpty) {
+          currentState = (motors[0]['state'] as String).toUpperCase();
+        }
+      } catch (e) {
+        // Fallback to OFF if parsing fails
+      }
+    }
+    
+    final activeColor = _getColorForState(currentState);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AppSectionHeader(title: 'Gas Burner Control', padding: const EdgeInsets.only(bottom: 12)),
         GlassPanel(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
           child: Column(
             children: [
+              // Dynamic Knob Design
+              Center(
+                child: SizedBox(
+                  width: 220,
+                  height: 220,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Dial Marks
+                      ...states.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final state = entry.value;
+                        final rotation = _getRotationForState(state);
+                        final isSelected = currentState == state;
+                        final color = isSelected ? _getColorForState(state) : AppColors.textSecondary(isDark).withValues(alpha: 0.3);
+                        
+                        return AnimatedRotation(
+                          turns: rotation,
+                          duration: const Duration(milliseconds: 600),
+                          curve: Curves.easeOutBack,
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 4,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color: color,
+                                      borderRadius: BorderRadius.circular(2),
+                                      boxShadow: isSelected ? [BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 8, spreadRadius: 2)] : [],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    state,
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: color,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                      
+                      // The Knob itself
+                      GestureDetector(
+                        onTapDown: (_) {
+                          // Allow cycling through states by tapping the center knob
+                          final currentIndex = states.indexOf(currentState);
+                          final nextIndex = (currentIndex + 1) % states.length;
+                          final newState = states[nextIndex];
+                          
+                          // Publish MQTT command via Provider
+                          final container = ProviderScope.containerOf(context, listen: false);
+                          container.read(mqttControllerProvider.notifier).publishGasCommand(
+                            widget.deviceId,
+                            'setPreset',
+                            newState.toLowerCase(),
+                            1, // Assuming Motor ID 1
+                          );
+                        },
+                        child: AnimatedRotation(
+                          turns: _getRotationForState(currentState),
+                          duration: const Duration(milliseconds: 600),
+                          curve: Curves.easeOutBack,
+                          child: Container(
+                            width: 140,
+                            height: 140,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: isDark 
+                                  ? [Colors.grey.shade800, Colors.grey.shade900]
+                                  : [Colors.grey.shade100, Colors.grey.shade300],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.2),
+                                  blurRadius: 15,
+                                  offset: const Offset(5, 5),
+                                ),
+                                BoxShadow(
+                                  color: isDark ? Colors.grey.shade800.withValues(alpha: 0.5) : Colors.white,
+                                  blurRadius: 15,
+                                  offset: const Offset(-5, -5),
+                                ),
+                              ],
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Center glow
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 400),
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: activeColor.withValues(alpha: 0.1),
+                                  ),
+                                ),
+                                // Indicator line on the knob
+                                Align(
+                                  alignment: Alignment.topCenter,
+                                  child: Container(
+                                    margin: const EdgeInsets.only(top: 15),
+                                    width: 6,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color: activeColor,
+                                      borderRadius: BorderRadius.circular(3),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: activeColor.withValues(alpha: 0.8),
+                                          blurRadius: 10,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // Preset control buttons below the knob
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: states.map((state) {
                   final isSelected = currentState == state;
+                  final color = _getColorForState(state);
                   return Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: InkWell(
+                      child: GestureDetector(
                         onTap: () {
-                          // TODO: implement setPreset action later
+                          // Publish MQTT command
+                          final container = ProviderScope.containerOf(context, listen: false);
+                          container.read(mqttControllerProvider.notifier).publishGasCommand(
+                            widget.deviceId,
+                            'setPreset',
+                            state.toLowerCase(),
+                            1, // Assuming Motor ID 1
+                          );
                         },
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: isSelected 
-                                ? (state == 'OFF' ? AppColors.error.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2)) 
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
+                            color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected 
-                                  ? (state == 'OFF' ? AppColors.error : Colors.orange) 
-                                  : AppColors.borderColor(isDark),
+                              color: isSelected ? color : AppColors.borderColor(isDark),
+                              width: isSelected ? 2 : 1,
                             ),
                           ),
                           alignment: Alignment.center,
                           child: Text(
                             state,
                             style: AppTypography.bodySmall.copyWith(
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected 
-                                  ? (state == 'OFF' ? AppColors.error : Colors.orange)
-                                  : AppColors.textSecondary(isDark),
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected ? color : AppColors.textSecondary(isDark),
                             ),
                           ),
                         ),
@@ -343,17 +529,28 @@ class _GasControlPanel extends StatelessWidget {
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.info_outline_rounded, size: 16, color: AppColors.textSecondary(isDark)),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Remote ignition requires physical knob turn.',
-                    style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(isDark)),
-                  ),
-                ],
+              
+              const SizedBox(height: 24),
+              // Safety Information
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, size: 24, color: Colors.orange),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Safety Gate: Remote ignition is disabled if the knob is completely OFF. Please turn the physical knob to ignite.',
+                        style: AppTypography.bodySmall.copyWith(color: isDark ? Colors.orange.shade200 : Colors.orange.shade800),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -362,3 +559,4 @@ class _GasControlPanel extends StatelessWidget {
     );
   }
 }
+

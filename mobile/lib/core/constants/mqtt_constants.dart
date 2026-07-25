@@ -47,6 +47,9 @@ class MqttConstants {
   static const String allDevicesHeartbeat = 'nt/v1/+/lwt';
   static const String allDeviceCommands = 'nt/v1/+/cmd/#';
 
+  static const String allGasStatus = 'tele/stove/+/status';
+  static const String allGasLwt = 'tele/stove/+/lwt';
+
   // --- QoS Levels ---
   static const int qosTelemetry = 0; // fire and forget
   static const int qosCommand = 1; // at least once
