@@ -130,6 +130,10 @@ class _SwitchPanel extends ConsumerWidget {
     // If a switch has a saved config, use its name/icon.
     // If not (newly provisioned or not yet configured), fall back to defaults.
     // This ensures ALL switches toggle correctly, even when only some have configs.
+    final Map<int, bool> switchStates = {};
+    final Map<int, String> switchNames = {};
+    final Map<int, String> switchIcons = {};
+
     for (int i = 1; i <= device.switchCount; i++) {
       final config = device.switches.firstWhereOrNull((s) => s.switchIndex == i);
       switchStates[i] =
