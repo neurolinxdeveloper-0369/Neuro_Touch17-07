@@ -56,9 +56,9 @@ class CircularSwitch extends StatelessWidget {
                   height: bezelSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF121212), // Very dark bezel
+                    color: isDark ? const Color(0xFF121212) : const Color(0xFFE0E0E0),
                     border: Border.all(
-                      color: isDark ? Colors.white.withOpacity(0.2) : Colors.black.withOpacity(0.8),
+                      color: isDark ? Colors.white : Colors.black,
                       width: 0.5,
                     ),
                     boxShadow: [
@@ -78,9 +78,9 @@ class CircularSwitch extends StatelessWidget {
                   height: innerSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF1E1E1E), // Lighter inner circle
+                    color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5), // Lighter inner circle
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.06), // Subtle inner highlight
+                      color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06),
                       width: 1.5,
                     ),
                     boxShadow: [
@@ -169,6 +169,12 @@ class _WallSwitchIcon extends StatelessWidget {
       case 'speaker': return Icons.speaker;
       case 'router': return Icons.router;
       case 'heater': return Icons.thermostat;
+      case 'floor_g': return Icons.g_mobiledata_rounded;
+      case 'floor_1': return Icons.looks_one_rounded;
+      case 'floor_2': return Icons.looks_two_rounded;
+      case 'floor_3': return Icons.looks_3_rounded;
+      case 'alarm': return Icons.notifications_active_rounded;
+      case 'emergency': return Icons.warning_rounded;
       default: return null;
     }
   }
@@ -236,6 +242,8 @@ class CircularSwitchGrid extends StatelessWidget {
   final Function(int index, bool newState) onToggle;
   final Function(int index)? onLongPress;
 
+  final bool isCustomLayout;
+
   const CircularSwitchGrid({
     super.key,
     required this.switchCount,
@@ -244,10 +252,46 @@ class CircularSwitchGrid extends StatelessWidget {
     this.switchIcons,
     required this.onToggle,
     this.onLongPress,
+    this.isCustomLayout = false,
   });
+
+  Widget _buildSwitchItem(int switchIndex) {
+    final isOn = switchStates[switchIndex] ?? false;
+    final label = switchNames[switchIndex] ?? 'Switch $switchIndex';
+    final icon = switchIcons?[switchIndex];
+    return CircularSwitch(
+      isOn: isOn,
+      onToggle: (v) => onToggle(switchIndex, v),
+      onLongPress: onLongPress != null ? () => onLongPress!(switchIndex) : null,
+      size: 68,
+      label: label,
+      icon: icon,
+    );
+  }
+
+  Widget _buildRow(List<int> indices) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: indices.map((idx) => _buildSwitchItem(idx)).toList(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isCustomLayout && (switchCount == 6 || switchCount == 7 || switchCount == 8)) {
+      List<Widget> rows = [];
+      if (switchCount == 8) {
+        rows = [_buildRow([1, 2]), _buildRow([3, 4]), _buildRow([5, 6]), _buildRow([7, 8])];
+      } else if (switchCount == 7) {
+        rows = [_buildRow([1]), _buildRow([2, 3]), _buildRow([4, 5]), _buildRow([6, 7])];
+      } else if (switchCount == 6) {
+        rows = [_buildRow([1]), _buildRow([2]), _buildRow([3, 4]), _buildRow([5, 6])];
+      }
+      return Column(
+        children: rows.map((r) => Padding(padding: const EdgeInsets.only(bottom: 20), child: r)).toList(),
+      );
+    }
+
     final crossAxisCount = switchCount <= 6 ? 3 : 4;
 
     return GridView.builder(
@@ -261,18 +305,7 @@ class CircularSwitchGrid extends StatelessWidget {
       ),
       itemCount: switchCount,
       itemBuilder: (context, index) {
-        final switchIndex = index + 1;
-        final isOn = switchStates[switchIndex] ?? false;
-        final label = switchNames[switchIndex] ?? 'Switch $switchIndex';
-        final icon = switchIcons?[switchIndex];
-        return CircularSwitch(
-          isOn: isOn,
-          onToggle: (v) => onToggle(switchIndex, v),
-          onLongPress: onLongPress != null ? () => onLongPress!(switchIndex) : null,
-          size: 68,
-          label: label,
-          icon: icon,
-        );
+        return _buildSwitchItem(index + 1);
       },
     );
   }

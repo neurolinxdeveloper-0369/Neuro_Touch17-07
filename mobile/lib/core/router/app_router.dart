@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../data/models/device.model.dart';
 import '../../controllers/auth.controller.dart';
 import '../../controllers/home_setup.controller.dart';
 import '../../presentation/splash/splash_screen.dart';
@@ -146,13 +147,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AddDeviceScreen(),
         routes: [
           GoRoute(
-            path: 'provisioning',
-            builder: (context, state) {
-              final extra = state.extra as Map<String, dynamic>? ?? {};
-              final panelNumber = extra['panelNumber'] as int? ?? 6;
-              return SoftApFlowScreen(panelNumber: panelNumber);
-            },
-          ),
+              path: 'provisioning',
+              builder: (context, state) {
+                final extra = state.extra as Map<String, dynamic>? ?? {};
+                return SoftApFlowScreen(
+                  deviceType: extra['deviceType'] ?? DeviceType.smartSwitch,
+                  ssidPattern: extra['ssidPattern'] ?? 'Neuro_Touch',
+                  switchCount: extra['switchCount'] ?? 1,
+                  deviceName: extra['deviceName'] ?? 'Smart Device',
+                );
+              },
+            ),
         ],
       ),
 

@@ -28,6 +28,7 @@ class AuthState {
     AuthStatus? status,
     UserModel? user,
     String? error,
+    bool clearError = false,
     bool? isMfaRequired,
     String? mfaTempToken,
     bool? isInitialized,
@@ -35,7 +36,7 @@ class AuthState {
       AuthState(
         status: status ?? this.status,
         user: user ?? this.user,
-        error: error ?? this.error,
+        error: clearError ? null : (error ?? this.error),
         isMfaRequired: isMfaRequired ?? this.isMfaRequired,
         mfaTempToken: mfaTempToken ?? this.mfaTempToken,
         isInitialized: isInitialized ?? this.isInitialized,
@@ -114,7 +115,7 @@ class AuthController extends StateNotifier<AuthState> {
   // --- Register ---
 
   Future<void> sendOtp(String phone) async {
-    state = state.copyWith(status: AuthStatus.loading, error: null);
+    state = state.copyWith(status: AuthStatus.loading, clearError: true);
     try {
       await _repo.sendOtp(phone);
       state = state.copyWith(status: AuthStatus.unauthenticated);
@@ -132,7 +133,7 @@ class AuthController extends StateNotifier<AuthState> {
     required String otp,
     String? name,
   }) async {
-    state = state.copyWith(status: AuthStatus.loading, error: null);
+    state = state.copyWith(status: AuthStatus.loading, clearError: true);
     try {
       final user = await _repo.verifyOtpLogin(
         phone: phone,
@@ -152,12 +153,12 @@ class AuthController extends StateNotifier<AuthState> {
   // --- Google Sign In ---
 
   Future<void> signInWithGoogle() async {
-    state = state.copyWith(status: AuthStatus.loading, error: null);
+    state = state.copyWith(status: AuthStatus.loading, clearError: true);
     try {
       final account = await _googleSignIn.signIn();
       if (account == null) {
         state =
-            state.copyWith(status: AuthStatus.unauthenticated, error: null);
+            state.copyWith(status: AuthStatus.unauthenticated, clearError: true);
         return;
       }
       final auth = await account.authentication;
@@ -196,7 +197,7 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   void clearError() {
-    state = state.copyWith(error: null);
+    state = state.copyWith(clearError: true);
   }
 
   String _parseError(Object e) {

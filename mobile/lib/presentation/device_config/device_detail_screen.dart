@@ -44,7 +44,7 @@ class DeviceDetailScreen extends ConsumerWidget {
           children: [
             _DeviceHeader(device: device),
             const SizedBox(height: 24),
-            if (device.deviceType == DeviceType.touchPanel)
+            if (device.switchCount > 0)
               _SwitchPanel(
                 device: device,
                 onToggle: (idx, state) => ref.read(mqttControllerProvider.notifier).publishSwitchCommand(deviceId, idx, state),
@@ -148,6 +148,7 @@ class _SwitchPanel extends ConsumerWidget {
           switchStates: switchStates,
           switchNames: switchNames,
           switchIcons: switchIcons,
+          isCustomLayout: device.deviceType == DeviceType.customTouchPanel,
           onToggle: (idx, state) => onToggle(idx, state),
           onLongPress: (idx) {
             Navigator.push(

@@ -330,15 +330,13 @@ func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 		finalDeviceID = input.MACAddress
 	}
 
-	// Validate switch count matches device type for touch panels
-	if input.DeviceType == "touch_panel" {
-		if input.SwitchCount < 6 || input.SwitchCount > 8 {
-			fmt.Printf("ProvisionDeviceEndpoint 400: invalid switch count: %d\n", input.SwitchCount)
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"success": false,
-				"error":   "Touch panel switch count must be 6, 7, or 8",
-			})
-		}
+	// Validate switch count is reasonable
+	if input.SwitchCount < 0 || input.SwitchCount > 64 {
+		fmt.Printf("ProvisionDeviceEndpoint 400: invalid switch count: %d\n", input.SwitchCount)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Switch count must be between 0 and 64",
+		})
 	}
 
 	// Verify home access (admin required to provision)
@@ -410,8 +408,8 @@ func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 		}
 	}
 
-	// Auto-create switch configs for touch panels
-	if input.DeviceType == "touch_panel" {
+	// Auto-create switch configs for devices with switches
+	if input.SwitchCount > 0 {
 		tx.Where("device_id = ?", device.ID).Delete(&models.SwitchConfig{})
 		for i := 1; i <= input.SwitchCount; i++ {
 			sw := models.SwitchConfig{

@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../data/models/floor.model.dart';
 import '../../../data/models/room.model.dart';
+import '../../../data/models/device.model.dart';
 
 // ─── Theme constants ───────────────────────────────────────────────────────
 const Color _primary = Color(0xFF2979FF);
@@ -21,9 +22,18 @@ const Color _success = Color(0xFF00E676);
 // ─── Root Screen ──────────────────────────────────────────────────────────
 
 class SoftApFlowScreen extends ConsumerStatefulWidget {
-  final int panelNumber;
+  final DeviceType deviceType;
+  final String ssidPattern;
+  final int switchCount;
+  final String deviceName;
 
-  const SoftApFlowScreen({super.key, required this.panelNumber});
+  const SoftApFlowScreen({
+    super.key,
+    required this.deviceType,
+    required this.ssidPattern,
+    required this.switchCount,
+    required this.deviceName,
+  });
 
   @override
   ConsumerState<SoftApFlowScreen> createState() => _SoftApFlowScreenState();
@@ -49,7 +59,7 @@ class _SoftApFlowScreenState extends ConsumerState<SoftApFlowScreen> {
 
       await ref
           .read(provisionControllerProvider.notifier)
-          .initPanel(widget.panelNumber, homeId);
+          .initDevice(widget.deviceType, widget.ssidPattern, widget.switchCount, homeId);
     });
   }
 
@@ -93,7 +103,7 @@ class _SoftApFlowScreenState extends ConsumerState<SoftApFlowScreen> {
         },
       ),
       title: Text(
-        _titleForStep(state.step, state.panelNumber),
+        _titleForStep(state.step, widget.deviceName),
         style: GoogleFonts.inter(
           fontWeight: FontWeight.w700,
           fontSize: 17,
@@ -104,11 +114,11 @@ class _SoftApFlowScreenState extends ConsumerState<SoftApFlowScreen> {
     );
   }
 
-  String _titleForStep(ProvisionStep step, int panel) {
+  String _titleForStep(ProvisionStep step, String deviceName) {
     switch (step) {
       case ProvisionStep.panelSelected:
       case ProvisionStep.instructions:
-        return 'Touch Panel $panel Setup';
+        return 'Setup $deviceName';
       case ProvisionStep.awaitingHotspotConnection:
         return 'Connect to Device';
       case ProvisionStep.networkChoice:
@@ -218,7 +228,7 @@ class _InstructionsStep extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Setting up Touch Panel ${state.panelNumber}',
+            'Setting up your device',
             style: GoogleFonts.inter(
               fontSize: 14,
               color: _primary,
@@ -229,7 +239,7 @@ class _InstructionsStep extends ConsumerWidget {
           _InstructionItem(
             num: '1',
             icon: Icons.power_settings_new_rounded,
-            title: 'Power on your Touch Panel ${state.panelNumber}',
+            title: 'Power on your device',
             subtitle: 'Wait for the LED to flash — device is in hotspot mode',
           ),
           _InstructionItem(
@@ -390,7 +400,7 @@ class _NetworkChoiceStep extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Select the Wi-Fi network your Touch Panel will use at home',
+            'Select the Wi-Fi network your device will use at home',
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Colors.grey,
@@ -708,7 +718,7 @@ class _NamingStepState extends ConsumerState<_NamingStep> {
     final state = ref.read(provisionControllerProvider);
     _ctrl.text = state.deviceName.isNotEmpty
         ? state.deviceName
-        : 'Touch Panel ${state.panelNumber}';
+        : state.deviceType.displayName;
   }
 
   @override
@@ -740,7 +750,7 @@ class _NamingStepState extends ConsumerState<_NamingStep> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Give your Touch Panel ${state.panelNumber} a meaningful name',
+            'Give your device a meaningful name',
             style: GoogleFonts.inter(fontSize: 14, color: Colors.grey),
           ),
           if (state.macAddress.isNotEmpty) ...[
@@ -1073,6 +1083,10 @@ class _SuccessStep extends ConsumerWidget {
             _PrimaryButton(
               label: 'Go to Devices',
               onTap: () {
+                final homeId = ref.read(homeIdProvider);
+                if (homeId != null && homeId.isNotEmpty) {
+                  ref.read(dashboardControllerProvider.notifier).refreshDevices(homeId);
+                }
                 ref.read(provisionControllerProvider.notifier).reset();
                 context.go('/devices');
               },

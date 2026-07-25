@@ -53,8 +53,9 @@ enum ProvisionStep {
 
 class ProvisionState {
   final ProvisionStep step;
-  final int panelNumber;        // 6, 7, or 8
-  final String expectedSsid;   // e.g. Rollin_Lift_Panel_6
+  final DeviceType deviceType;
+  final int switchCount;
+  final String expectedSsid;   // e.g. Neuro_Touch_6S
   final String tempDeviceId;   // nt-XXXXXXXX (pre-MAC)
   final String macAddress;     // AA:BB:CC:DD:EE:FF from ESP
 
@@ -80,7 +81,8 @@ class ProvisionState {
 
   const ProvisionState({
     this.step = ProvisionStep.panelSelected,
-    this.panelNumber = 6,
+    this.deviceType = DeviceType.smartSwitch,
+    this.switchCount = 6,
     this.expectedSsid = 'Neuro_Touch_6S',
     this.tempDeviceId = '',
     this.macAddress = '',
@@ -102,7 +104,8 @@ class ProvisionState {
 
   ProvisionState copyWith({
     ProvisionStep? step,
-    int? panelNumber,
+    DeviceType? deviceType,
+    int? switchCount,
     String? expectedSsid,
     String? tempDeviceId,
     String? macAddress,
@@ -123,7 +126,8 @@ class ProvisionState {
   }) {
     return ProvisionState(
       step: step ?? this.step,
-      panelNumber: panelNumber ?? this.panelNumber,
+      deviceType: deviceType ?? this.deviceType,
+      switchCount: switchCount ?? this.switchCount,
       expectedSsid: expectedSsid ?? this.expectedSsid,
       tempDeviceId: tempDeviceId ?? this.tempDeviceId,
       macAddress: macAddress ?? this.macAddress,
@@ -160,18 +164,13 @@ class ProvisionNotifier extends StateNotifier<ProvisionState> {
   ProvisionNotifier(this._deviceRepo, this._ref)
       : super(const ProvisionState());
 
-  /// Returns expected SSID for a given panel number.
-  static String ssidForPanel(int panelNumber) =>
-      'Neuro_Touch_${panelNumber}S';
-
-  /// Call this first when user selects a panel on the add-device screen.
-  Future<void> initPanel(int panelNumber, String homeId) async {
-    final ssid = ssidForPanel(panelNumber);
-
+  /// Call this first when user selects a device on the add-device screen.
+  Future<void> initDevice(DeviceType deviceType, String ssidPattern, int switchCount, String homeId) async {
     state = ProvisionState(
       step: ProvisionStep.instructions,
-      panelNumber: panelNumber,
-      expectedSsid: ssid,
+      deviceType: deviceType,
+      switchCount: switchCount,
+      expectedSsid: ssidPattern,
     );
 
     // Generate a temporary device ID from backend
@@ -321,8 +320,6 @@ class ProvisionNotifier extends StateNotifier<ProvisionState> {
         final resp = await _deviceRepo.checkProvisionStatus(state.tempDeviceId);
         if (resp == 'online') {
           _pollTimer?.cancel();
-          // Assume MAC comes back from status endpoint (or read from response)
-          // In this flow the ESP posts its MAC directly to the backend
           state = state.copyWith(
             step: ProvisionStep.naming,
             isLoading: false,
@@ -385,10 +382,10 @@ class ProvisionNotifier extends StateNotifier<ProvisionState> {
       final device = await _deviceRepo.provisionDevice(
         homeId: homeId,
         macAddress: deviceId,
-        deviceType: 'touch_panel',
+        deviceType: state.deviceType.apiValue,
         name: state.deviceName,
         ssidPattern: state.expectedSsid,
-        switchCount: state.panelNumber,
+        switchCount: state.switchCount,
         assignmentType: state.assignmentType,
         floorId: state.selectedFloorId,
         roomId: state.selectedRoomId,

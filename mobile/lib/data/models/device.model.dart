@@ -2,108 +2,136 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
 enum DeviceType {
-  touchPanel,
-  irBlaster,
-  liftPanel,
+  smartSwitch,
+  irRemote,
   energyMeter,
   tempMonitor,
+  customTouchPanel,
+  waterLevel,
+  neuroSmartSwitch,
 }
 
 extension DeviceTypeExtension on DeviceType {
   String get displayName {
     switch (this) {
-      case DeviceType.touchPanel:
-        return 'Smart Touch Panel';
-      case DeviceType.irBlaster:
-        return 'IR Blaster';
-      case DeviceType.liftPanel:
-        return 'Lift Panel';
+      case DeviceType.smartSwitch:
+        return 'Smart Touch Switch';
+      case DeviceType.irRemote:
+        return 'IR Remote';
       case DeviceType.energyMeter:
         return 'Energy Meter';
       case DeviceType.tempMonitor:
-        return 'Temp Monitor';
+        return 'Temperature Monitor';
+      case DeviceType.customTouchPanel:
+        return 'Custom Touch Panel';
+      case DeviceType.waterLevel:
+        return 'Water Level Controller';
+      case DeviceType.neuroSmartSwitch:
+        return 'Neuro Smart Switch';
     }
   }
 
   String get shortName {
     switch (this) {
-      case DeviceType.touchPanel:
-        return 'Touch Panel';
-      case DeviceType.irBlaster:
-        return 'IR Blaster';
-      case DeviceType.liftPanel:
-        return 'Lift Panel';
+      case DeviceType.smartSwitch:
+        return 'Smart Switch';
+      case DeviceType.irRemote:
+        return 'IR Remote';
       case DeviceType.energyMeter:
         return 'Energy Meter';
       case DeviceType.tempMonitor:
         return 'Temp Monitor';
+      case DeviceType.customTouchPanel:
+        return 'Touch Panel';
+      case DeviceType.waterLevel:
+        return 'Water Level';
+      case DeviceType.neuroSmartSwitch:
+        return 'Smart Switch';
     }
   }
 
   IconData get icon {
     switch (this) {
-      case DeviceType.touchPanel:
+      case DeviceType.smartSwitch:
+      case DeviceType.neuroSmartSwitch:
+      case DeviceType.customTouchPanel:
         return Icons.grid_view_rounded;
-      case DeviceType.irBlaster:
-        return Icons.sensors_rounded;
-      case DeviceType.liftPanel:
-        return Icons.elevator_rounded;
+      case DeviceType.irRemote:
+        return Icons.settings_remote_rounded;
       case DeviceType.energyMeter:
         return Icons.electric_bolt_rounded;
       case DeviceType.tempMonitor:
         return Icons.thermostat_rounded;
+      case DeviceType.waterLevel:
+        return Icons.water_drop_rounded;
     }
   }
 
   Color get color {
     switch (this) {
-      case DeviceType.touchPanel:
+      case DeviceType.smartSwitch:
+      case DeviceType.neuroSmartSwitch:
+      case DeviceType.customTouchPanel:
         return const Color(0xFF4C6FFF);
-      case DeviceType.irBlaster:
+      case DeviceType.irRemote:
         return const Color(0xFF6C5CE7);
-      case DeviceType.liftPanel:
-        return const Color(0xFFE17055);
       case DeviceType.energyMeter:
         return const Color(0xFF00B894);
       case DeviceType.tempMonitor:
         return const Color(0xFF00CEC9);
+      case DeviceType.waterLevel:
+        return const Color(0xFF0984E3);
     }
   }
 
   String get apiValue {
     switch (this) {
-      case DeviceType.touchPanel:
-        return 'touch_panel';
-      case DeviceType.irBlaster:
-        return 'ir_blaster';
-      case DeviceType.liftPanel:
-        return 'lift_panel';
+      case DeviceType.smartSwitch:
+        return 'smart_switch';
+      case DeviceType.irRemote:
+        return 'ir_remote';
       case DeviceType.energyMeter:
         return 'energy_meter';
       case DeviceType.tempMonitor:
         return 'temp_monitor';
+      case DeviceType.customTouchPanel:
+        return 'custom_touch_panel';
+      case DeviceType.waterLevel:
+        return 'water_level';
+      case DeviceType.neuroSmartSwitch:
+        return 'neuro_smart_switch';
     }
   }
 
   static DeviceType fromString(String value) {
     switch (value.toLowerCase()) {
-      case 'touch_panel':
-      case 'touchpanel':
-        return DeviceType.touchPanel;
+      case 'smart_switch':
+      case 'smartswitch':
+        return DeviceType.smartSwitch;
+      case 'ir_remote':
+      case 'irremote':
       case 'ir_blaster':
       case 'irblaster':
-        return DeviceType.irBlaster;
-      case 'lift_panel':
-      case 'liftpanel':
-        return DeviceType.liftPanel;
+        return DeviceType.irRemote;
       case 'energy_meter':
       case 'energymeter':
         return DeviceType.energyMeter;
       case 'temp_monitor':
       case 'tempmonitor':
         return DeviceType.tempMonitor;
+      case 'custom_touch_panel':
+      case 'touch_panel':
+      case 'lift_panel':
+      case 'liftpanel':
+        return DeviceType.customTouchPanel;
+      case 'water_level':
+      case 'waterlevel':
+        return DeviceType.waterLevel;
+      case 'neuro_smart_switch':
+      case 'neurosmartswitch':
+        return DeviceType.neuroSmartSwitch;
       default:
-        return DeviceType.touchPanel;
+        return DeviceType.smartSwitch;
     }
   }
 }
@@ -214,7 +242,7 @@ class DeviceModel extends Equatable {
         lastSeen: json['last_seen'] != null
             ? DateTime.tryParse(json['last_seen'] as String)
             : null,
-        switchCount: json['switch_count'] as int? ?? 1,
+        switchCount: json['switch_count'] as int? ?? 0,
         config: (json['config'] is Map<String, dynamic>)
             ? (json['config'] as Map<String, dynamic>)
             : {},

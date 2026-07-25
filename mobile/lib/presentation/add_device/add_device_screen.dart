@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../data/models/device.model.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/extensions.dart';
@@ -11,13 +13,17 @@ class DeviceModelDef {
   final String name;
   final String category;
   final IconData icon;
-  final int? panelNumber; // Only set for Touch Panel variants
+  final DeviceType deviceType;
+  final String ssidPattern;
+  final int switchCount;
 
   const DeviceModelDef({
     required this.name,
     required this.category,
     required this.icon,
-    this.panelNumber,
+    required this.deviceType,
+    required this.ssidPattern,
+    required this.switchCount,
   });
 }
 
@@ -29,51 +35,55 @@ class AddDeviceScreen extends ConsumerStatefulWidget {
 }
 
 class _AddDeviceScreenState extends ConsumerState<AddDeviceScreen> {
-  String _selectedCategory = 'All';
   String _searchQuery = '';
-  final _searchController = TextEditingController();
+  String _selectedCategory = 'All';
+  final TextEditingController _searchController = TextEditingController();
 
   final List<String> _categories = [
     'All',
-    'IR Blasters',
-    'Touch Switches',
-    'Energy Meters',
-    'Sensors',
-    'Water Systems',
+    'Smart Switches',
+    'Smart Switches (Non-Touch)',
     'Custom IoT Device',
+    'IR Remotes',
+    'Energy Monitoring',
+    'Environment',
+    'Water Systems',
   ];
 
   final List<DeviceModelDef> _devices = [
-    // IR Blasters
-    const DeviceModelDef(name: 'Smart IR', category: 'IR Blasters', icon: Icons.sensors_rounded),
-    const DeviceModelDef(name: 'IR Blaster Plus', category: 'IR Blasters', icon: Icons.sensors_rounded),
-    
-    // Touch Switches
-    const DeviceModelDef(name: '1 Node Touch Switch', category: 'Touch Switches', icon: Icons.touch_app_rounded),
-    const DeviceModelDef(name: '2 Node Touch Switch', category: 'Touch Switches', icon: Icons.touch_app_rounded),
-    const DeviceModelDef(name: '4 Node Touch Switch', category: 'Touch Switches', icon: Icons.touch_app_rounded),
-    const DeviceModelDef(name: '6 Node Touch Switch', category: 'Touch Switches', icon: Icons.touch_app_rounded),
-    const DeviceModelDef(name: '8 Node Touch Switch', category: 'Touch Switches', icon: Icons.touch_app_rounded),
-    const DeviceModelDef(name: '10 Node Touch Switch', category: 'Touch Switches', icon: Icons.touch_app_rounded),
-    const DeviceModelDef(name: '16 Node Touch Switch', category: 'Touch Switches', icon: Icons.touch_app_rounded),
-    
-    // Energy Meters
-    const DeviceModelDef(name: '1 Switch (Single Phase)', category: 'Energy Meters', icon: Icons.electric_bolt_rounded),
-    const DeviceModelDef(name: '1 Switch (Three Phase)', category: 'Energy Meters', icon: Icons.electric_bolt_rounded),
-    const DeviceModelDef(name: 'Single Phase Energy Meter', category: 'Energy Meters', icon: Icons.speed_rounded),
-    const DeviceModelDef(name: 'Three Phase Energy Meter', category: 'Energy Meters', icon: Icons.speed_rounded),
-    
-    // Sensors
-    const DeviceModelDef(name: 'Sensor Smart (Temp)', category: 'Sensors', icon: Icons.thermostat_rounded),
-    
-    // Water Systems
-    const DeviceModelDef(name: 'Smart Water Tank Controller', category: 'Water Systems', icon: Icons.water_drop_rounded),
-    const DeviceModelDef(name: 'Water Tank Controller Plus', category: 'Water Systems', icon: Icons.water_drop_rounded),
+    // Smart Switches
+    const DeviceModelDef(name: 'Neuro Touch 4S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_4S', switchCount: 4),
+    const DeviceModelDef(name: 'Neuro Touch 6S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_6S', switchCount: 6),
+    const DeviceModelDef(name: 'Neuro Touch 8S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_8S', switchCount: 8),
+    const DeviceModelDef(name: 'Neuro Touch 12S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_12S', switchCount: 12),
+    const DeviceModelDef(name: 'Neuro Touch 16S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_16S', switchCount: 16),
 
-    // Custom IoT Device — Touch Panels (panelNumber drives switch count & SSID validation)
-    const DeviceModelDef(name: 'Touch Panel - 6', category: 'Custom IoT Device', icon: Icons.settings_input_component_rounded, panelNumber: 6),
-    const DeviceModelDef(name: 'Touch Panel - 7', category: 'Custom IoT Device', icon: Icons.settings_input_component_rounded, panelNumber: 7),
-    const DeviceModelDef(name: 'Touch Panel - 8', category: 'Custom IoT Device', icon: Icons.settings_input_component_rounded, panelNumber: 8),
+    // Smart Switches (Non-Touch)
+    const DeviceModelDef(name: 'Neuro Smart Switch 4S', category: 'Smart Switches (Non-Touch)', icon: Icons.toggle_on_rounded, deviceType: DeviceType.neuroSmartSwitch, ssidPattern: 'Neuro_Smart_Switch_4S', switchCount: 4),
+    const DeviceModelDef(name: 'Neuro Smart Switch 6S', category: 'Smart Switches (Non-Touch)', icon: Icons.toggle_on_rounded, deviceType: DeviceType.neuroSmartSwitch, ssidPattern: 'Neuro_Smart_Switch_6S', switchCount: 6),
+    const DeviceModelDef(name: 'Neuro Smart Switch 8S', category: 'Smart Switches (Non-Touch)', icon: Icons.toggle_on_rounded, deviceType: DeviceType.neuroSmartSwitch, ssidPattern: 'Neuro_Smart_Switch_8S', switchCount: 8),
+    const DeviceModelDef(name: 'Neuro Smart Switch 12S', category: 'Smart Switches (Non-Touch)', icon: Icons.toggle_on_rounded, deviceType: DeviceType.neuroSmartSwitch, ssidPattern: 'Neuro_Smart_Switch_12S', switchCount: 12),
+    const DeviceModelDef(name: 'Neuro Smart Switch 16S', category: 'Smart Switches (Non-Touch)', icon: Icons.toggle_on_rounded, deviceType: DeviceType.neuroSmartSwitch, ssidPattern: 'Neuro_Smart_Switch_16S', switchCount: 16),
+
+    // IR Remotes
+    const DeviceModelDef(name: 'Smart IR Remote 1X', category: 'IR Remotes', icon: Icons.settings_remote_rounded, deviceType: DeviceType.irRemote, ssidPattern: 'IR_Remote_Smart_1X', switchCount: 0),
+    const DeviceModelDef(name: 'Smart IR Remote 1P', category: 'IR Remotes', icon: Icons.settings_remote_rounded, deviceType: DeviceType.irRemote, ssidPattern: 'IR_Remote_Smart_1P', switchCount: 0),
+
+    // Energy Monitoring
+    const DeviceModelDef(name: 'Single Phase Energy Meter', category: 'Energy Monitoring', icon: Icons.electric_bolt_rounded, deviceType: DeviceType.energyMeter, ssidPattern: 'Single_Phase_1X', switchCount: 0),
+    const DeviceModelDef(name: 'Three Phase Energy Meter', category: 'Energy Monitoring', icon: Icons.electric_bolt_rounded, deviceType: DeviceType.energyMeter, ssidPattern: 'Three_Phase_1X', switchCount: 0),
+
+    // Environment
+    const DeviceModelDef(name: 'Temperature Monitor 1T', category: 'Environment', icon: Icons.thermostat_rounded, deviceType: DeviceType.tempMonitor, ssidPattern: 'Temp_Monitor_1T', switchCount: 0),
+
+    // Water Systems
+    const DeviceModelDef(name: 'Smart Water Level', category: 'Water Systems', icon: Icons.water_drop_rounded, deviceType: DeviceType.waterLevel, ssidPattern: 'Water_Level_Smart_1X', switchCount: 4),
+    const DeviceModelDef(name: 'Water Level Plus', category: 'Water Systems', icon: Icons.water_drop_rounded, deviceType: DeviceType.waterLevel, ssidPattern: 'Water_Level_Plus_1X', switchCount: 4),
+
+    // Custom IoT Device - Touch Panels
+    const DeviceModelDef(name: 'Touch Panel 6S', category: 'Custom IoT Device', icon: Icons.settings_input_component_rounded, deviceType: DeviceType.customTouchPanel, ssidPattern: 'Touch_Panel_6S', switchCount: 6),
+    const DeviceModelDef(name: 'Touch Panel 7S', category: 'Custom IoT Device', icon: Icons.settings_input_component_rounded, deviceType: DeviceType.customTouchPanel, ssidPattern: 'Touch_Panel_7S', switchCount: 7),
+    const DeviceModelDef(name: 'Touch Panel 8S', category: 'Custom IoT Device', icon: Icons.settings_input_component_rounded, deviceType: DeviceType.customTouchPanel, ssidPattern: 'Touch_Panel_8S', switchCount: 8),
   ];
 
   @override
@@ -167,13 +177,13 @@ class _AddDeviceScreenState extends ConsumerState<AddDeviceScreen> {
       child: TextField(
         controller: _searchController,
         onChanged: (v) => setState(() => _searchQuery = v),
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           hintText: 'Search Device Types',
-          prefixIcon: const Icon(Icons.search_rounded, size: 20),
+          prefixIcon: Icon(Icons.search_rounded, size: 20),
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          contentPadding: EdgeInsets.symmetric(vertical: 12),
         ),
       ),
     );
@@ -243,7 +253,12 @@ class _AddDeviceScreenState extends ConsumerState<AddDeviceScreen> {
     return GestureDetector(
       onTap: () => context.push(
         '/add-device/provisioning',
-        extra: {'panelNumber': device.panelNumber ?? 6},
+        extra: {
+          'deviceType': device.deviceType,
+          'ssidPattern': device.ssidPattern,
+          'switchCount': device.switchCount,
+          'deviceName': device.name,
+        },
       ),
       child: GlassPanel(
         padding: const EdgeInsets.all(12),
