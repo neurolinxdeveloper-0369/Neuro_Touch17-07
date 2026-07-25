@@ -178,8 +178,8 @@ func SendCommand(c *fiber.Ctx) error {
 	}
 
 	// We declare a channel/hook or direct MQTT service publish.
-	// We'll write to topic: neurotouch/devices/{deviceId}/command/{feature}
-	topic := fmt.Sprintf("neurotouch/devices/%s/command/%s", deviceID, input.Feature)
+	// We'll write to topic: nt/v1/{deviceId}/cmd/{feature}
+	topic := fmt.Sprintf("nt/v1/%s/cmd/%s", deviceID, input.Feature)
 	payloadBytes, _ := json.Marshal(input.Payload)
 
 	// Since we import mqtt service, we publish directly via a package variable or channel

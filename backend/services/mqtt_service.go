@@ -37,9 +37,9 @@ func InitMqtt() {
 
 		// Subscribe to wildcards QoS 1
 		topics := map[string]byte{
-			"neurotouch/devices/+/telemetry/#": 1,
-			"neurotouch/devices/+/status":      1,
-			"neurotouch/devices/+/heartbeat":   1,
+			"nt/v1/+/stat/telemetry": 1,
+			"nt/v1/+/stat/state":     1,
+			"nt/v1/+/lwt":            1,
 		}
 
 		for topic, qos := range topics {
@@ -82,17 +82,18 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 	payload := string(message.Payload())
 
 	parts := strings.Split(topic, "/")
-	if len(parts) < 4 || parts[0] != "neurotouch" || parts[1] != "devices" {
+	// nt/v1/{deviceID}/{direction}/{action}
+	if len(parts) < 4 || parts[0] != "nt" || parts[1] != "v1" {
 		return
 	}
 
 	deviceID := parts[2]
-	messageType := parts[3]
+	messageType := parts[3] // stat or lwt
 
 	db := config.AppConfig.DB
 
 	switch messageType {
-	case "heartbeat":
+	case "lwt":
 		// Payload: {"uptime": 3600, "firmware": "v1.0.1"}
 		var data map[string]interface{}
 		_ = json.Unmarshal([]byte(payload), &data)
@@ -112,54 +113,51 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 
 		db.Model(&models.Device{}).Where("id = ?", deviceID).Updates(updates)
 
-	case "status":
-		// Payload: {"status": "online"} or {"status": "offline"}
-		var data map[string]interface{}
-		_ = json.Unmarshal([]byte(payload), &data)
-
-		if data != nil {
-			if status, exists := data["status"]; exists {
-				isOnline := status == "online"
-				db.Model(&models.Device{}).Where("id = ?", deviceID).Update("is_online", isOnline)
-			}
-		}
-
-	case "telemetry":
+	case "stat":
 		if len(parts) < 5 {
 			return
 		}
-		metric := parts[4]
-		// Payload: {"value": 230.5} or value directly
-		var val float64
-		var err error
+		action := parts[4]
 
-		// Try loading json
-		var data map[string]interface{}
-		if errJson := json.Unmarshal([]byte(payload), &data); errJson == nil && data != nil {
-			if v, exists := data["value"]; exists {
-				val, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
-			} else {
-				// Try key matching metric
-				if v, exists := data[metric]; exists {
-					val, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
+		if action == "telemetry" {
+			// Payload: {"rssi": -65, "uptime_sec": 3600, "free_heap": 40000, "fw_version": "1.0.0"}
+			var data map[string]interface{}
+			_ = json.Unmarshal([]byte(payload), &data)
+
+			now := time.Now()
+			updates := map[string]interface{}{
+				"is_online": true,
+				"last_seen": &now,
+			}
+
+			if data != nil {
+				if fw, exists := data["fw_version"]; exists {
+					fwStr := fmt.Sprintf("%v", fw)
+					updates["firmware_version"] = &fwStr
+				}
+				
+				// Optional: Insert specific telemetry metrics into telemetries table
+				for k, v := range data {
+					if k != "fw_version" && k != "uptime_sec" {
+						val, _ := strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
+						telemetry := models.Telemetry{
+							DeviceID:   deviceID,
+							Metric:     k,
+							Value:      val,
+							RecordedAt: time.Now(),
+						}
+						db.Create(&telemetry)
+					}
 				}
 			}
-		} else {
-			// Direct float value string
-			val, err = strconv.ParseFloat(payload, 64)
-			if err != nil {
-				return // invalid payload format
-			}
+			db.Model(&models.Device{}).Where("id = ?", deviceID).Updates(updates)
+		} else if action == "state" {
+			// State updates are handled directly by EMQX Rules saving to Postgres.
+			// But we mark it online here just in case.
+			db.Model(&models.Device{}).Where("id = ?", deviceID).Update("is_online", true)
 		}
+	}
 
-		// Insert into telemetry table
-		telemetry := models.Telemetry{
-			DeviceID:   deviceID,
-			Metric:     metric,
-			Value:      val,
-			RecordedAt: time.Now(),
-		}
-		db.Create(&telemetry)
 	}
 }
 
