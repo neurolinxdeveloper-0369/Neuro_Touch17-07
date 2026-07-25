@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/device.model.dart';
 import '../data/repositories/device.repository.dart';
-import '../data/repositories/home.repository.dart';
 import '../data/services/storage_service.dart';
 
 class ShortcutItem {

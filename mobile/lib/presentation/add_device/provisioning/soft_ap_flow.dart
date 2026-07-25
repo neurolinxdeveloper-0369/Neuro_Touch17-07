@@ -8,8 +8,6 @@ import '../../../controllers/dashboard.controller.dart';
 import '../../../controllers/home_setup.controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/extensions.dart';
-import '../../../data/models/floor.model.dart';
-import '../../../data/models/room.model.dart';
 import '../../../data/models/device.model.dart';
 
 // ─── Theme constants ───────────────────────────────────────────────────────
@@ -864,25 +862,9 @@ class _AssignmentStep extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
 
-          // Assignment type picker
+          // Assignment type picker — Site or Outdoor only
           Row(
             children: [
-              _AssignTypeChip(
-                  label: 'Room',
-                  icon: Icons.meeting_room_rounded,
-                  selected: state.assignmentType == 'room',
-                  onTap: () => ref
-                      .read(provisionControllerProvider.notifier)
-                      .setAssignmentType('room')),
-              const SizedBox(width: 10),
-              _AssignTypeChip(
-                  label: 'Floor',
-                  icon: Icons.stairs_rounded,
-                  selected: state.assignmentType == 'floor',
-                  onTap: () => ref
-                      .read(provisionControllerProvider.notifier)
-                      .setAssignmentType('floor')),
-              const SizedBox(width: 10),
               _AssignTypeChip(
                   label: 'Site',
                   icon: Icons.location_city_rounded,
@@ -901,60 +883,6 @@ class _AssignmentStep extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 24),
-
-          // Floor dropdown (if floors exist)
-          if ((state.assignmentType == 'floor' ||
-                  state.assignmentType == 'room') &&
-              state.floors.isNotEmpty) ...[
-            Text('Select Floor',
-                style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            _DropdownField<FloorModel>(
-              isDark: isDark,
-              hint: 'Choose a floor',
-              value: state.floors.firstWhereOrNull(
-                  (f) => f.id == state.selectedFloorId),
-              items: state.floors,
-              labelBuilder: (f) => f.name,
-              onChanged: (f) {
-                if (f != null) {
-                  ref
-                      .read(provisionControllerProvider.notifier)
-                      .setSelectedFloor(f.id);
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Room dropdown (if rooms loaded)
-          if (state.assignmentType == 'room' && state.rooms.isNotEmpty) ...[
-            Text('Select Room',
-                style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            _DropdownField<RoomModel>(
-              isDark: isDark,
-              hint: 'Choose a room',
-              value:
-                  state.rooms.firstWhereOrNull((r) => r.id == state.selectedRoomId),
-              items: state.rooms,
-              labelBuilder: (r) => r.name,
-              onChanged: (r) {
-                if (r != null) {
-                  ref
-                      .read(provisionControllerProvider.notifier)
-                      .setSelectedRoom(r.id);
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
 
           if (state.assignmentType == 'site' ||
               state.assignmentType == 'outdoor') ...[
