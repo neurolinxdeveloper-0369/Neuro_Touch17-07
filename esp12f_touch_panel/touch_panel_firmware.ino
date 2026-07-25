@@ -46,6 +46,9 @@
 // GPIO pins
 #define LED_PIN 2   // Blue LED (active LOW on ESP12F)
 // Add GPIO definitions for your 8 relays here
+
+// Global Switch State Array
+bool switchStates[SWITCH_COUNT] = {false};
 // EEPROM layout
 #define EEPROM_SIZE  256
 #define SSID_ADDR    0
@@ -125,44 +128,72 @@ void blinkLed(int times, int delayMs = 200) {
     }
 }
 // ─── MQTT Handlers ───────────────────────────────────────────────────────────
+void publishFullState() {
+    StaticJsonDocument<512> doc;
+    doc["msg_id"] = "hw-" + String(millis());
+    doc["source"] = "touch"; // Indicates physical/hardware action
+    
+    JsonObject switches = doc.createNestedObject("switches");
+    for (int i = 0; i < SWITCH_COUNT; i++) {
+        // Switches are 1-indexed in the JSON payload (1 to 8)
+        switches[String(i + 1)] = switchStates[i];
+    }
+    
+    String payload;
+    serializeJson(doc, payload);
+    String stateTopic = "nt/v1/" + savedDeviceId + "/stat/state";
+    
+    // Retain flag = true so the app gets the latest state instantly on connect
+    mqttClient.publish(stateTopic.c_str(), payload.c_str(), true); 
+}
+
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
     String message = "";
     for (int i = 0; i < length; i++) message += (char)payload[i];
     Serial.println("[MQTT] Received on " + String(topic) + ": " + message);
-    StaticJsonDocument<256> doc;
+    
+    StaticJsonDocument<512> doc;
     DeserializationError err = deserializeJson(doc, message);
     if (err) return;
-    // Check if it's a switch command
-    if (String(topic).endsWith("/command/switch")) {
-        int index = doc["switch_index"] | 0;
-        bool state = doc["state"] | false;
-
-        Serial.printf("[Switch] Toggling switch %d to %s\n", index, state ? "ON" : "OFF");
-
-        // TODO: Write HIGH/LOW to your actual relay GPIO pins here based on 'index'
-
-        // Acknowledge back with telemetry update
-        String telemetryTopic = "neurotouch/devices/" + savedDeviceId + "/telemetry/switch";
-        String payload = "{\"sw" + String(index) + "\": " + (state ? "true" : "false") + "}";
-        mqttClient.publish(telemetryTopic.c_str(), payload.c_str());
+    
+    // Check if it's a state command from the App
+    if (String(topic).endsWith("/cmd/state")) {
+        JsonObject switches = doc["switches"];
+        if (!switches.isNull()) {
+            for (JsonPair kv : switches) {
+                int index = String(kv.key().c_str()).toInt() - 1; // Convert '1' to index 0
+                if (index >= 0 && index < SWITCH_COUNT) {
+                    bool state = kv.value().as<bool>();
+                    switchStates[index] = state;
+                    Serial.printf("[Switch] App requested switch %d to %s\n", index + 1, state ? "ON" : "OFF");
+                    
+                    // TODO: digitalWrite to your actual relay pins here
+                }
+            }
+            // Acknowledge back with full state update
+            publishFullState();
+        }
     }
 }
 void reconnectMqtt() {
     while (!mqttClient.connected()) {
         Serial.print("[MQTT] Attempting connection...");
         String clientId = "NT-ESP-" + String(WiFi.macAddress());
-        String statusTopic = "neurotouch/devices/" + savedDeviceId + "/status";
+        String lwtTopic = "nt/v1/" + savedDeviceId + "/lwt";
 
         // Connect with Last Will and Testament for status
-        if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASS, statusTopic.c_str(), 1, true, "{\"status\":\"offline\"}")) {
+        if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASS, lwtTopic.c_str(), 1, true, "{\"status\":\"offline\"}")) {
             Serial.println("connected");
 
-            // Publish online status immediately
-            mqttClient.publish(statusTopic.c_str(), "{\"status\":\"online\"}", true);
+            // Publish online status immediately (Retained)
+            mqttClient.publish(lwtTopic.c_str(), "{\"status\":\"online\"}", true);
 
             // Subscribe to all commands for this device
-            String cmdTopic = "neurotouch/devices/" + savedDeviceId + "/command/#";
+            String cmdTopic = "nt/v1/" + savedDeviceId + "/cmd/#";
             mqttClient.subscribe(cmdTopic.c_str());
+            
+            // Publish initial switch state upon connecting
+            publishFullState();
         } else {
             Serial.print("failed, rc=");
             Serial.print(mqttClient.state());
@@ -265,12 +296,30 @@ void loop() {
             reconnectMqtt();
         }
         mqttClient.loop();
-        // Send heartbeat every 60s
+        
+        // --- Debug: Simulate physical touch on Switch 1 every 30 seconds ---
+        static unsigned long lastTouchSim = 0;
+        if (millis() - lastTouchSim > 30000) {
+            lastTouchSim = millis();
+            switchStates[0] = !switchStates[0]; // Toggle switch 1
+            Serial.printf("[Debug] Simulated physical touch! Switch 1 is now %s\n", switchStates[0] ? "ON" : "OFF");
+            publishFullState(); // Instantly update database and App
+        }
+        
+        // Send heartbeat (telemetry) every 60s
         if (millis() - lastHeartbeat > 60000) {
             lastHeartbeat = millis();
-            String hbTopic = "neurotouch/devices/" + savedDeviceId + "/heartbeat";
-            String hbPayload = "{\"uptime\":" + String(millis()/1000) + "}";
-            mqttClient.publish(hbTopic.c_str(), hbPayload.c_str());
+            String telTopic = "nt/v1/" + savedDeviceId + "/stat/telemetry";
+            
+            StaticJsonDocument<256> doc;
+            doc["rssi"] = WiFi.RSSI();
+            doc["uptime_sec"] = millis() / 1000;
+            doc["free_heap"] = ESP.getFreeHeap();
+            doc["fw_version"] = "1.0.0";
+            
+            String hbPayload;
+            serializeJson(doc, hbPayload);
+            mqttClient.publish(telTopic.c_str(), hbPayload.c_str());
         }
     }
 }

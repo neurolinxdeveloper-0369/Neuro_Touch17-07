@@ -20,27 +20,32 @@ class MqttConstants {
 
   // --- Topic Builders ---
 
+  // --- Topic Builders ---
+
   static String deviceCommand(String deviceId, String feature) =>
-      'neurotouch/devices/$deviceId/command/$feature';
+      'nt/v1/$deviceId/cmd/state'; // Using state as default command action
 
   static String deviceTelemetry(String deviceId, String feature) =>
-      'neurotouch/devices/$deviceId/telemetry/$feature';
+      'nt/v1/$deviceId/stat/telemetry';
 
   static String deviceStatus(String deviceId) =>
-      'neurotouch/devices/$deviceId/status';
+      'nt/v1/$deviceId/stat/state'; // We now subscribe to stat/state for status
 
   static String deviceHeartbeat(String deviceId) =>
-      'neurotouch/devices/$deviceId/heartbeat';
+      'nt/v1/$deviceId/stat/telemetry'; // Heartbeat merged with telemetry
+
+  static String deviceLWT(String deviceId) =>
+      'nt/v1/$deviceId/lwt';
 
   static String homeBroadcast(String homeId) =>
-      'neurotouch/homes/$homeId/broadcast';
+      'nt/v1/homes/$homeId/broadcast';
 
   // --- Wildcard Subscriptions ---
 
-  static const String allDevicesTelemetry = 'neurotouch/devices/+/telemetry/#';
-  static const String allDevicesStatus = 'neurotouch/devices/+/status';
-  static const String allDevicesHeartbeat = 'neurotouch/devices/+/heartbeat';
-  static const String allDeviceCommands = 'neurotouch/devices/+/command/#';
+  static const String allDevicesTelemetry = 'nt/v1/+/stat/telemetry';
+  static const String allDevicesStatus = 'nt/v1/+/stat/state';
+  static const String allDevicesHeartbeat = 'nt/v1/+/lwt';
+  static const String allDeviceCommands = 'nt/v1/+/cmd/#';
 
   // --- QoS Levels ---
   static const int qosTelemetry = 0; // fire and forget

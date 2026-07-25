@@ -64,7 +64,7 @@ class MqttService {
     _client!.connectionMessage = MqttConnectMessage()
         .withClientIdentifier(clientId)
         .authenticateAs(MqttConstants.username, MqttConstants.password)
-        .withWillTopic('neurotouch/clients/$clientId/status')
+        .withWillTopic('nt/v1/clients/$clientId/lwt')
         .withWillMessage('{"status":"offline"}')
         .withWillQos(MqttQos.atLeastOnce)
         .startClean();

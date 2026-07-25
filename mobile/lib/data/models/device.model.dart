@@ -9,6 +9,7 @@ enum DeviceType {
   customTouchPanel,
   waterLevel,
   neuroSmartSwitch,
+  gasControl,
 }
 
 extension DeviceTypeExtension on DeviceType {
@@ -28,6 +29,8 @@ extension DeviceTypeExtension on DeviceType {
         return 'Water Level Controller';
       case DeviceType.neuroSmartSwitch:
         return 'Neuro Smart Switch';
+      case DeviceType.gasControl:
+        return 'Gas Controller';
     }
   }
 
@@ -47,6 +50,8 @@ extension DeviceTypeExtension on DeviceType {
         return 'Water Level';
       case DeviceType.neuroSmartSwitch:
         return 'Smart Switch';
+      case DeviceType.gasControl:
+        return 'Gas Control';
     }
   }
 
@@ -64,6 +69,8 @@ extension DeviceTypeExtension on DeviceType {
         return Icons.thermostat_rounded;
       case DeviceType.waterLevel:
         return Icons.water_drop_rounded;
+      case DeviceType.gasControl:
+        return Icons.local_fire_department_rounded;
     }
   }
 
@@ -81,6 +88,8 @@ extension DeviceTypeExtension on DeviceType {
         return const Color(0xFF00CEC9);
       case DeviceType.waterLevel:
         return const Color(0xFF0984E3);
+      case DeviceType.gasControl:
+        return const Color(0xFFFF7675);
     }
   }
 
@@ -100,6 +109,8 @@ extension DeviceTypeExtension on DeviceType {
         return 'water_level';
       case DeviceType.neuroSmartSwitch:
         return 'neuro_smart_switch';
+      case DeviceType.gasControl:
+        return 'gas_control';
     }
   }
 
@@ -130,6 +141,9 @@ extension DeviceTypeExtension on DeviceType {
       case 'neuro_smart_switch':
       case 'neurosmartswitch':
         return DeviceType.neuroSmartSwitch;
+      case 'gas_control':
+      case 'gascontrol':
+        return DeviceType.gasControl;
       default:
         return DeviceType.smartSwitch;
     }

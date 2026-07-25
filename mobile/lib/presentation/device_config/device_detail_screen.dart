@@ -52,6 +52,7 @@ class DeviceDetailScreen extends ConsumerWidget {
               ),
             if (device.deviceType == DeviceType.energyMeter) _EnergyPanel(device: device, mqttState: mqttState),
             if (device.deviceType == DeviceType.tempMonitor) _TempPanel(deviceId: deviceId, mqttState: mqttState),
+            if (device.deviceType == DeviceType.gasControl) _GasControlPanel(deviceId: deviceId, mqttState: mqttState),
             const SizedBox(height: 100),
           ],
         ),
@@ -274,6 +275,89 @@ class _CircleMetric extends StatelessWidget {
         const SizedBox(height: 8),
         Text(value, style: AppTypography.h2),
         Text(label, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(context.isDark))),
+      ],
+    );
+  }
+}
+
+class _GasControlPanel extends StatelessWidget {
+  final String deviceId;
+  final MqttState mqttState;
+
+  const _GasControlPanel({required this.deviceId, required this.mqttState});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    
+    // Fallback static UI for now as requested. MQTT/Backend will be integrated later.
+    // The device supports off, low, med, high states.
+    final List<String> states = ['OFF', 'LOW', 'MED', 'HIGH'];
+    final String currentState = 'OFF';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppSectionHeader(title: 'Gas Burner Control', padding: const EdgeInsets.only(bottom: 12)),
+        GlassPanel(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: states.map((state) {
+                  final isSelected = currentState == state;
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: InkWell(
+                        onTap: () {
+                          // TODO: implement setPreset action later
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected 
+                                ? (state == 'OFF' ? AppColors.error.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2)) 
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isSelected 
+                                  ? (state == 'OFF' ? AppColors.error : Colors.orange) 
+                                  : AppColors.borderColor(isDark),
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            state,
+                            style: AppTypography.bodySmall.copyWith(
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected 
+                                  ? (state == 'OFF' ? AppColors.error : Colors.orange)
+                                  : AppColors.textSecondary(isDark),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 16, color: AppColors.textSecondary(isDark)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Remote ignition requires physical knob turn.',
+                    style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(isDark)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

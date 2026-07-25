@@ -94,37 +94,58 @@ class MqttController extends StateNotifier<MqttState> {
 
   void _handleMessage(MqttMessage msg) {
     final parts = msg.topic.split('/');
-    // Topic: neurotouch/devices/{deviceId}/{type}/{feature?}
-    if (parts.length < 4 || parts[0] != 'neurotouch' || parts[1] != 'devices') {
-      return;
-    }
+    // Topic: nt/v1/{deviceId}/{direction}/{action}
+    if (parts.length < 4 || parts[0] != 'nt' || parts[1] != 'v1') return;
 
     final deviceId = parts[2];
-    final type = parts[3];
+    final direction = parts[3];
 
-    if (type == 'heartbeat') {
-      _handleHeartbeat(deviceId, msg.payload);
-      return;
-    }
+    // Update last seen for ANY message from device
+    _updateLastSeen(deviceId);
 
-    if (type == 'status') {
+    if (direction == 'lwt') {
       _handleDeviceStatus(deviceId, msg.payload);
       return;
     }
 
-    if (type == 'telemetry' && parts.length >= 5) {
-      final feature = parts[4];
-      _handleTelemetry(deviceId, feature, msg.payload);
-      return;
+    if (parts.length >= 5 && direction == 'stat') {
+      final action = parts[4];
+      if (action == 'state') {
+        _handleStateUpdate(deviceId, msg.payload);
+      } else if (action == 'telemetry') {
+        _handleTelemetry(deviceId, 'telemetry', msg.payload);
+      }
     }
   }
 
-  void _handleHeartbeat(String deviceId, Map<String, dynamic> payload) {
+  void _updateLastSeen(String deviceId) {
     final newOnline = Map<String, bool>.from(state.onlineMap);
     final newLastSeen = Map<String, DateTime>.from(state.lastSeenMap);
     newOnline[deviceId] = true;
     newLastSeen[deviceId] = DateTime.now();
     state = state.copyWith(onlineMap: newOnline, lastSeenMap: newLastSeen);
+  }
+
+  void _handleStateUpdate(String deviceId, Map<String, dynamic> payload) {
+    if (!payload.containsKey('switches')) return;
+    
+    // Convert 'switches' sub-object to expected format
+    final Map<String, dynamic> switchesMap = Map<String, dynamic>.from(payload['switches']);
+    final Map<String, dynamic> formattedSwitches = {};
+    switchesMap.forEach((key, value) {
+      formattedSwitches['sw$key'] = value;
+    });
+    
+    // Deep clone
+    final newFeatures =
+        Map<String, Map<String, Map<String, dynamic>>>.from(state.deviceFeatures
+            .map((k, v) => MapEntry(k, Map<String, Map<String, dynamic>>.from(
+                v.map((k2, v2) => MapEntry(k2, Map<String, dynamic>.from(v2)))))));
+
+    newFeatures[deviceId] ??= {};
+    newFeatures[deviceId]!['switch'] = formattedSwitches;
+
+    state = state.copyWith(deviceFeatures: newFeatures);
   }
 
   void _handleDeviceStatus(String deviceId, Map<String, dynamic> payload) {
@@ -194,10 +215,12 @@ class MqttController extends StateNotifier<MqttState> {
 
     state = state.copyWith(deviceFeatures: newGlobalValues);
 
-    // Send MQTT command
-    publishCommand(deviceId, 'switch', {
-      'switch_index': switchIndex,
-      'state': stateValue,
+    // Send MQTT command with new architecture payload
+    publishCommand(deviceId, 'state', {
+      'msg_id': 'app-req-${DateTime.now().millisecondsSinceEpoch}',
+      'switches': {
+        switchIndex.toString(): stateValue
+      }
     });
   }
 
