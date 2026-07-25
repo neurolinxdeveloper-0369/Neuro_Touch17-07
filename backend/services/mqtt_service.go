@@ -71,9 +71,24 @@ func InitMqtt() {
 			var parsed map[string]interface{}
 			if err := json.Unmarshal([]byte(payload), &parsed); err == nil {
 				if sw, ok := parsed["switches"]; ok {
-					swBytes, _ := json.Marshal(sw)
-					config.AppConfig.DB.Model(&models.Device{}).Where("id = ?", deviceID).Update("config", string(swBytes))
-					log.Printf("💾 [DB SIMULATOR] Saved switch state directly to database for %s: %s", deviceID, string(swBytes))
+					var device models.Device
+					if err := config.AppConfig.DB.Where("id = ?", deviceID).First(&device).Error; err == nil {
+						var currentConfig map[string]interface{}
+						if device.Config != "" {
+							json.Unmarshal([]byte(device.Config), &currentConfig)
+						}
+						if currentConfig == nil {
+							currentConfig = make(map[string]interface{})
+						}
+						if swMap, ok := sw.(map[string]interface{}); ok {
+							for k, v := range swMap {
+								currentConfig[k] = v
+							}
+						}
+						swBytes, _ := json.Marshal(currentConfig)
+						config.AppConfig.DB.Model(&models.Device{}).Where("id = ?", deviceID).Update("config", string(swBytes))
+						log.Printf("💾 [DB SIMULATOR] Saved switch state directly to database for %s: %s", deviceID, string(swBytes))
+					}
 				}
 			}
 		}
