@@ -62,6 +62,22 @@ func InitMqtt() {
 
 	// Link controller's publishing stub to the real MQTT client
 	controllers.MqttPublish = func(topic string, payload string) {
+		log.Printf("🖥️ [SERVER CONSOLE] App sent command via HTTP to topic %s: %s", topic, payload)
+		
+		// [SIMULATOR] Fallback since hardware cannot connect to update DB
+		parts := strings.Split(topic, "/")
+		if len(parts) >= 5 && parts[4] == "state" {
+			deviceID := parts[2]
+			var parsed map[string]interface{}
+			if err := json.Unmarshal([]byte(payload), &parsed); err == nil {
+				if sw, ok := parsed["switches"]; ok {
+					swBytes, _ := json.Marshal(sw)
+					config.AppConfig.DB.Model(&models.Device{}).Where("id = ?", deviceID).Update("config", string(swBytes))
+					log.Printf("💾 [DB SIMULATOR] Saved switch state directly to database for %s: %s", deviceID, string(swBytes))
+				}
+			}
+		}
+
 		if MqttClient != nil && MqttClient.IsConnected() {
 			token := MqttClient.Publish(topic, 1, false, payload)
 			token.Wait()

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/services/api_client.dart';
 import '../data/services/mqtt_service.dart';
 import '../core/constants/mqtt_constants.dart';
 
@@ -222,6 +224,24 @@ class MqttController extends StateNotifier<MqttState> {
         switchIndex.toString(): stateValue
       }
     });
+
+    debugPrint('📱 [DEBUG] App requested Switch $switchIndex to ${stateValue ? "ON" : "OFF"}');
+
+    // HTTP Fallback (simulates MQTT for backend while firewall is blocked)
+    final apiPayload = {
+      'feature': 'state',
+      'payload': {
+        'msg_id': 'app-req-${DateTime.now().millisecondsSinceEpoch}',
+        'switches': {
+          switchIndex.toString(): stateValue
+        }
+      }
+    };
+    try {
+      ApiClient.instance.post('/devices/$deviceId/command', data: apiPayload);
+    } catch(e) {
+      debugPrint('HTTP error: $e');
+    }
   }
 
   void publishIrCommand(
