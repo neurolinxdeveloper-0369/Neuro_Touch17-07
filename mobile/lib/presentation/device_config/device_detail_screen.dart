@@ -125,15 +125,28 @@ class _SwitchPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mqttState = ref.watch(mqttControllerProvider);
 
-    // Build switch state map from MQTT values
+    // Build switch state map from MQTT values.
+    // If device.switches is empty (just provisioned, configs not yet loaded),
+    // fall back to index-based defaults so toggles work immediately.
     final Map<int, bool> switchStates = {};
     final Map<int, String> switchNames = {};
     final Map<int, String> switchIcons = {};
-    for (final sw in device.switches) {
-      switchStates[sw.switchIndex] =
-          mqttState.getDeviceValue(device.id, 'switch', 'sw${sw.switchIndex}') as bool? ?? false;
-      switchNames[sw.switchIndex] = sw.name;
-      switchIcons[sw.switchIndex] = sw.icon;
+
+    if (device.switches.isNotEmpty) {
+      for (final sw in device.switches) {
+        switchStates[sw.switchIndex] =
+            mqttState.getDeviceValue(device.id, 'switch', 'sw${sw.switchIndex}') as bool? ?? false;
+        switchNames[sw.switchIndex] = sw.name;
+        switchIcons[sw.switchIndex] = sw.icon;
+      }
+    } else {
+      // Freshly provisioned — no switch configs yet. Use defaults.
+      for (int i = 1; i <= device.switchCount; i++) {
+        switchStates[i] =
+            mqttState.getDeviceValue(device.id, 'switch', 'sw$i') as bool? ?? false;
+        switchNames[i] = 'Switch $i';
+        switchIcons[i] = 'lightbulb';
+      }
     }
 
     return Column(

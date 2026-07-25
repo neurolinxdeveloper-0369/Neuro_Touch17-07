@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants/api_constants.dart';
 import '../data/models/device.model.dart';
-import '../data/models/floor.model.dart';
-import '../data/models/room.model.dart';
 import '../data/repositories/device.repository.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,11 +66,7 @@ class ProvisionState {
 
   // Assignment
   final String deviceName;
-  final String assignmentType; // floor | room | site | outdoor
-  final String? selectedFloorId;
-  final String? selectedRoomId;
-  final List<FloorModel> floors;
-  final List<RoomModel> rooms;
+  final String assignmentType; // site | outdoor | floor | room
 
   // Result
   final DeviceModel? provisionedDevice;
@@ -93,10 +87,6 @@ class ProvisionState {
     this.useHomeNetwork = true,
     this.deviceName = '',
     this.assignmentType = 'room',
-    this.selectedFloorId,
-    this.selectedRoomId,
-    this.floors = const [],
-    this.rooms = const [],
     this.provisionedDevice,
     this.errorMessage,
     this.isLoading = false,
@@ -116,10 +106,6 @@ class ProvisionState {
     bool? useHomeNetwork,
     String? deviceName,
     String? assignmentType,
-    String? selectedFloorId,
-    String? selectedRoomId,
-    List<FloorModel>? floors,
-    List<RoomModel>? rooms,
     DeviceModel? provisionedDevice,
     String? errorMessage,
     bool? isLoading,
@@ -138,10 +124,6 @@ class ProvisionState {
       useHomeNetwork: useHomeNetwork ?? this.useHomeNetwork,
       deviceName: deviceName ?? this.deviceName,
       assignmentType: assignmentType ?? this.assignmentType,
-      selectedFloorId: selectedFloorId ?? this.selectedFloorId,
-      selectedRoomId: selectedRoomId ?? this.selectedRoomId,
-      floors: floors ?? this.floors,
-      rooms: rooms ?? this.rooms,
       provisionedDevice: provisionedDevice ?? this.provisionedDevice,
       errorMessage: errorMessage,
       isLoading: isLoading ?? this.isLoading,
@@ -176,21 +158,17 @@ class ProvisionNotifier extends StateNotifier<ProvisionState> {
     // Generate a temporary device ID from backend
     try {
       final tempId = await _deviceRepo.generateDeviceUuid();
-      
-      // Fetch home credentials and floors in parallel if homeId is provided
+
+      // Fetch home network credentials
       Map<String, String?> creds = {'ssid': null, 'password': null};
-      List<FloorModel> floors = [];
-      
       if (homeId.isNotEmpty) {
         creds = await _deviceRepo.getHomeNetworkCredentials(homeId);
-        floors = await _deviceRepo.getHomeFloors(homeId);
       }
 
       state = state.copyWith(
         tempDeviceId: tempId,
         homeSsid: creds['ssid'],
         homePassword: creds['password'],
-        floors: floors,
       );
     } catch (e) {
       state = state.copyWith(
@@ -352,22 +330,7 @@ class ProvisionNotifier extends StateNotifier<ProvisionState> {
   void setAssignmentType(String type) {
     state = state.copyWith(
       assignmentType: type,
-      selectedFloorId: null,
-      selectedRoomId: null,
     );
-  }
-
-  void setSelectedFloor(String floorId) async {
-    state = state.copyWith(selectedFloorId: floorId, selectedRoomId: null);
-    // Load rooms for this floor
-    try {
-      final rooms = await _deviceRepo.getFloorRooms(floorId);
-      state = state.copyWith(rooms: rooms);
-    } catch (_) {}
-  }
-
-  void setSelectedRoom(String roomId) {
-    state = state.copyWith(selectedRoomId: roomId);
   }
 
   /// Final step — save device to backend
@@ -387,8 +350,6 @@ class ProvisionNotifier extends StateNotifier<ProvisionState> {
         ssidPattern: state.expectedSsid,
         switchCount: state.switchCount,
         assignmentType: state.assignmentType,
-        floorId: state.selectedFloorId,
-        roomId: state.selectedRoomId,
       );
 
       state = state.copyWith(

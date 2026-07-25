@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/device.model.dart';
-import '../models/floor.model.dart';
-import '../models/room.model.dart';
 import '../models/telemetry.model.dart';
 import '../services/api_client.dart';
 import '../../core/constants/api_constants.dart';
@@ -162,26 +160,6 @@ class DeviceRepository {
     return TelemetryHistoryModel.fromJson(data['history'] as Map<String, dynamic>);
   }
 
-  // ─── Floors & Rooms ──────────────────────────────────────────────
-
-  Future<List<FloorModel>> getHomeFloors(String homeId) async {
-    final resp = await _api.get(ApiConstants.homeFloors(homeId));
-    final data = resp.data as Map<String, dynamic>;
-    if (data['success'] != true) throw Exception(data['error']);
-    return (data['floors'] as List<dynamic>)
-        .map((f) => FloorModel.fromJson(f as Map<String, dynamic>))
-        .toList();
-  }
-
-  Future<List<RoomModel>> getFloorRooms(String floorId) async {
-    final resp = await _api.get(ApiConstants.floorRooms(floorId));
-    final data = resp.data as Map<String, dynamic>;
-    if (data['success'] != true) throw Exception(data['error']);
-    return (data['rooms'] as List<dynamic>)
-        .map((r) => RoomModel.fromJson(r as Map<String, dynamic>))
-        .toList();
-  }
-
   // ─── Provisioning ──────────────────────────────────────────────
 
   Future<String> generateDeviceUuid() async {
@@ -216,8 +194,6 @@ class DeviceRepository {
     required String ssidPattern,
     required int switchCount,
     required String assignmentType,
-    String? floorId,
-    String? roomId,
   }) async {
     final resp = await _api.post(ApiConstants.provisionDevice, data: {
       'home_id': homeId,
@@ -228,8 +204,6 @@ class DeviceRepository {
       'ssid_pattern': ssidPattern,
       'switch_count': switchCount,
       'assignment_type': assignmentType,
-      if (floorId != null) 'floor_id': floorId,
-      if (roomId != null) 'room_id': roomId,
     });
     final data = resp.data as Map<String, dynamic>;
     if (data['success'] != true) throw Exception(data['error']);
