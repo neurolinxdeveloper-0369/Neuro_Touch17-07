@@ -157,8 +157,6 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 			db.Model(&models.Device{}).Where("id = ?", deviceID).Update("is_online", true)
 		}
 	}
-
-	}
 }
 
 func startHeartbeatTimeoutMonitor() {
