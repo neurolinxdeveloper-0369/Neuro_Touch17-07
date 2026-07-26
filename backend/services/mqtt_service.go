@@ -203,17 +203,57 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 					updates["firmware_version"] = &fwStr
 				}
 				
-				// Optional: Insert specific telemetry metrics into telemetries table
-				for k, v := range data {
-					if k != "fw_version" && k != "uptime_sec" {
-						val, _ := strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
-						telemetry := models.Telemetry{
-							DeviceID:   deviceID,
-							Metric:     k,
-							Value:      val,
-							RecordedAt: time.Now(),
+				_, hasEnergyKwh := data["energy_kwh"]
+				_, hasTotalEnergy := data["total_energy"]
+				_, hasVoltage1 := data["voltage_1"]
+				
+				if hasEnergyKwh || hasTotalEnergy || hasVoltage1 {
+					energy := models.EnergyReading{
+						DeviceID: deviceID,
+						RecordedAt: time.Now(),
+					}
+					
+					// 1-Phase mappings (fallback)
+					if v, ok := data["voltage"]; ok { energy.Voltage1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["current"]; ok { energy.Current1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["power"]; ok { energy.Power1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["power_factor"]; ok { energy.Pf1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["energy_kwh"]; ok { energy.TotalEnergy, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					
+					// 3-Phase mappings
+					if v, ok := data["voltage_1"]; ok { energy.Voltage1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["current_1"]; ok { energy.Current1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["power_1"]; ok { energy.Power1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["pf_1"]; ok { energy.Pf1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					
+					if v, ok := data["voltage_2"]; ok { energy.Voltage2, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["current_2"]; ok { energy.Current2, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["power_2"]; ok { energy.Power2, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["pf_2"]; ok { energy.Pf2, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					
+					if v, ok := data["voltage_3"]; ok { energy.Voltage3, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["current_3"]; ok { energy.Current3, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["power_3"]; ok { energy.Power3, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["pf_3"]; ok { energy.Pf3, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					
+					if v, ok := data["total_power"]; ok { energy.TotalPower, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["total_energy"]; ok { energy.TotalEnergy, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["frequency"]; ok { energy.Frequency, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					
+					db.Create(&energy)
+				} else {
+					// Optional: Insert specific telemetry metrics into telemetries table
+					for k, v := range data {
+						if k != "fw_version" && k != "uptime_sec" && k != "timestamp" {
+							val, _ := strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
+							telemetry := models.Telemetry{
+								DeviceID:   deviceID,
+								Metric:     k,
+								Value:      val,
+								RecordedAt: time.Now(),
+							}
+							db.Create(&telemetry)
 						}
-						db.Create(&telemetry)
 					}
 				}
 			}

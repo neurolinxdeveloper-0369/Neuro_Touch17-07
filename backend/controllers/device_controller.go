@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"neurotouch/config"
 	"neurotouch/models"
@@ -198,6 +199,65 @@ func SendCommand(c *fiber.Ctx) error {
 var MqttPublish func(topic string, payload string) = func(topic string, payload string) {
 	// Fallback print
 	fmt.Printf("[SIMULATED MQTT PUBLISH] Topic: %s, Payload: %s\n", topic, payload)
+}
+
+// GetEnergyHistory
+func GetEnergyHistory(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(string)
+	deviceID := c.Params("id")
+
+	if _, err := checkDeviceAccess(config.AppConfig.DB, deviceID, userID, false); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"success": false,
+			"error":   "Access denied",
+		})
+	}
+
+	var records []models.DailyEnergyRecord
+	// Fetch last 90 days, ordered by date ascending
+	if err := config.AppConfig.DB.Where("device_id = ?", deviceID).Order("date asc").Limit(90).Find(&records).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Failed loading energy history",
+		})
+	}
+
+	// Calculate Today and Month Consumed
+	now := time.Now()
+	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	
+	monthConsumed := 0.0
+	for _, rec := range records {
+		if rec.Date.After(startOfMonth) || rec.Date.Equal(startOfMonth) {
+			monthConsumed += rec.UnitsConsumed
+		}
+	}
+
+	var latestEnergy models.EnergyReading
+	err := config.AppConfig.DB.Where("device_id = ?", deviceID).Order("recorded_at desc").First(&latestEnergy).Error
+	
+	todayConsumed := 0.0
+	if err == nil {
+		var lastDaily models.DailyEnergyRecord
+		errDaily := config.AppConfig.DB.Where("device_id = ?", deviceID).Order("date desc").First(&lastDaily).Error
+		if errDaily == nil {
+			todayConsumed = latestEnergy.TotalEnergy - lastDaily.EndEnergy
+			if todayConsumed < 0 {
+				todayConsumed = 0
+			}
+		} else {
+			todayConsumed = 0
+		}
+	}
+	
+	monthConsumed += todayConsumed
+
+	return c.JSON(fiber.Map{
+		"success":        true,
+		"history":        records,
+		"today_consumed": todayConsumed,
+		"month_consumed": monthConsumed,
+	})
 }
 
 // GetSwitches

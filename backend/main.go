@@ -36,6 +36,8 @@ func main() {
 		&models.Telemetry{},
 		&models.Notification{},
 		&models.GasMotor{},
+		&models.DailyEnergyRecord{},
+		&models.EnergyReading{},
 	)
 	if err != nil {
 		log.Fatalf("Failed database migration: %v", err)
@@ -47,6 +49,7 @@ func main() {
 	services.InitMqtt()
 	services.InitAIChat()
 	services.StartTelemetryCompactor()
+	services.InitEnergyAggregator()
 
 	// 4. Create Fiber Web Application
 	app := fiber.New(fiber.Config{

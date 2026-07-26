@@ -63,6 +63,7 @@ func SetupRoutes(app *fiber.App) {
 	// Telemetry
 	protected.Get("/devices/:id/telemetry/latest", controllers.GetTelemetryLatest)
 	protected.Get("/devices/:id/telemetry/history", controllers.GetTelemetryHistory)
+	protected.Get("/devices/:id/energy/history", controllers.GetEnergyHistory)
 
 	// Automations (Scenes)
 	protected.Get("/homes/:id/automations", controllers.GetAutomations)

@@ -157,3 +157,44 @@ type GasMotor struct {
 	PresetHigh  int       `gorm:"default:1900" json:"preset_high"`
 	UpdatedAt   time.Time `gorm:"default:now()" json:"updated_at"`
 }
+
+type DailyEnergyRecord struct {
+	ID             string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	DeviceID       string    `gorm:"type:varchar(50);not null;index" json:"device_id"`
+	Date           time.Time `gorm:"type:date;not null;index" json:"date"`
+	StartEnergy    float64   `gorm:"not null" json:"start_energy"`
+	EndEnergy      float64   `gorm:"not null" json:"end_energy"`
+	UnitsConsumed  float64   `gorm:"not null" json:"units_consumed"`
+	AvgPowerFactor float64   `gorm:"default:0" json:"avg_power_factor"`
+	CreatedAt      time.Time `gorm:"default:now()" json:"created_at"`
+}
+
+type EnergyReading struct {
+	ID          uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	DeviceID    string    `gorm:"type:varchar(50);not null;index" json:"device_id"`
+	
+	// Phase 1 (Used by 1-Phase & 3-Phase)
+	Voltage1    float64   `gorm:"type:real;default:0" json:"voltage_1"`
+	Current1    float64   `gorm:"type:real;default:0" json:"current_1"`
+	Power1      float64   `gorm:"type:real;default:0" json:"power_1"`
+	Pf1         float64   `gorm:"type:real;default:0" json:"pf_1"`
+	
+	// Phase 2 (Used by 3-Phase only)
+	Voltage2    float64   `gorm:"type:real;default:0" json:"voltage_2"`
+	Current2    float64   `gorm:"type:real;default:0" json:"current_2"`
+	Power2      float64   `gorm:"type:real;default:0" json:"power_2"`
+	Pf2         float64   `gorm:"type:real;default:0" json:"pf_2"`
+	
+	// Phase 3 (Used by 3-Phase only)
+	Voltage3    float64   `gorm:"type:real;default:0" json:"voltage_3"`
+	Current3    float64   `gorm:"type:real;default:0" json:"current_3"`
+	Power3      float64   `gorm:"type:real;default:0" json:"power_3"`
+	Pf3         float64   `gorm:"type:real;default:0" json:"pf_3"`
+	
+	// System Totals
+	TotalPower  float64   `gorm:"type:real;default:0" json:"total_power"`
+	TotalEnergy float64   `gorm:"type:real;default:0" json:"total_energy"`
+	Frequency   float64   `gorm:"type:real;default:0" json:"frequency"`
+	
+	RecordedAt  time.Time `gorm:"index;default:now()" json:"recorded_at"`
+}
