@@ -434,6 +434,26 @@ func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 		}
 	}
 
+	// Auto-create gas motor config for gas_control devices
+	if input.DeviceType == "gas_control" {
+		var motorCount int64
+		tx.Model(&models.GasMotor{}).Where("device_id = ?", device.ID).Count(&motorCount)
+		if motorCount == 0 {
+			gm := models.GasMotor{
+				DeviceID: device.ID,
+				MotorID:  1,
+				State:    "off",
+			}
+			if err := tx.Create(&gm).Error; err != nil {
+				tx.Rollback()
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"success": false,
+					"error":   "Failed to generate default gas motor: " + err.Error(),
+				})
+			}
+		}
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
