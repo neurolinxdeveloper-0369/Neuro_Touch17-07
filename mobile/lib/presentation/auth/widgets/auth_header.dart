@@ -35,7 +35,7 @@ class AuthHeader extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                'Rollin Techno',
+                'Neuro Touch',
                 style: AppTypography.label.copyWith(
                   color: isDark ? AppColors.primaryLight : AppColors.primary,
                 ),

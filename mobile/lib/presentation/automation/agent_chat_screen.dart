@@ -44,7 +44,7 @@ class _AgentChatScreenState extends ConsumerState<AgentChatScreen> {
             id: const Uuid().v4(),
             role: 'assistant',
             content:
-                'Hello! I\'m your Rollin Techno AI assistant. I can help you control your devices, create automations, and answer questions about your smart home. What would you like to do?',
+                'Hello! I\'m your Neuro Touch AI assistant. I can help you control your devices, create automations, and answer questions about your smart home. What would you like to do?',
             timestamp: DateTime.now(),
           ),
         ];

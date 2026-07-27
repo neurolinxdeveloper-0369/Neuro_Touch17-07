@@ -80,7 +80,7 @@ class SettingsScreen extends ConsumerWidget {
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out from Rollin Techno?'),
+        content: const Text('Are you sure you want to sign out from Neuro Touch?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),

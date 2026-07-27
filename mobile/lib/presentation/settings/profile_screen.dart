@@ -39,7 +39,7 @@ class ProfileScreen extends ConsumerWidget {
                         : null,
                   ),
                   const SizedBox(height: 20),
-                  Text(user?.name ?? 'Rollin Techno User', style: AppTypography.h2),
+                  Text(user?.name ?? 'Neuro Touch User', style: AppTypography.h2),
                   Text(user?.contactDisplay ?? '', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary(isDark))),
                 ],
               ),

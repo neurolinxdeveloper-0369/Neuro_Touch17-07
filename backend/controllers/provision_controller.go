@@ -103,7 +103,7 @@ type ValidatePanelInput struct {
 
 // expectedSSID returns the correct AP SSID for a given panel number.
 func expectedSSID(panelNumber int) string {
-	return fmt.Sprintf("Rollin_Lift_Panel_%d", panelNumber)
+	return fmt.Sprintf("Neuro_Lift_Panel_%d", panelNumber)
 }
 
 // ValidatePanelSSID checks if the selected panel matches the connected SSID.

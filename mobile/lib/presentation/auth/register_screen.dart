@@ -80,7 +80,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   const SizedBox(height: 32),
                   const AuthHeader(
                     title: 'Create Account',
-                    subtitle: 'Join Rollin Techno for a smarter living experience',
+                    subtitle: 'Join Neuro Touch for a smarter living experience',
                   ),
                   const SizedBox(height: 40),
                   AuthTextField(

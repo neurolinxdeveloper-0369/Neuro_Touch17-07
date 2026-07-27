@@ -17,7 +17,7 @@ class NeuroTouchApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
-      title: 'Rollin Techno',
+      title: 'Neuro Touch',
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
       theme: AppTheme.lightTheme,

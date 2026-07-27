@@ -53,11 +53,11 @@ class _AddDeviceScreenState extends ConsumerState<AddDeviceScreen> {
 
   final List<DeviceModelDef> _devices = [
     // Smart Switches
-    const DeviceModelDef(name: 'Rollin Techno 4S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_4S', switchCount: 4),
-    const DeviceModelDef(name: 'Rollin Techno 6S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_6S', switchCount: 6),
-    const DeviceModelDef(name: 'Rollin Techno 8S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_8S', switchCount: 8),
-    const DeviceModelDef(name: 'Rollin Techno 12S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_12S', switchCount: 12),
-    const DeviceModelDef(name: 'Rollin Techno 16S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_16S', switchCount: 16),
+    const DeviceModelDef(name: 'Neuro Touch 4S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_4S', switchCount: 4),
+    const DeviceModelDef(name: 'Neuro Touch 6S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_6S', switchCount: 6),
+    const DeviceModelDef(name: 'Neuro Touch 8S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_8S', switchCount: 8),
+    const DeviceModelDef(name: 'Neuro Touch 12S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_12S', switchCount: 12),
+    const DeviceModelDef(name: 'Neuro Touch 16S', category: 'Smart Switches', icon: Icons.grid_view_rounded, deviceType: DeviceType.smartSwitch, ssidPattern: 'Neuro_Touch_16S', switchCount: 16),
 
     // Smart Switches (Non-Touch)
     const DeviceModelDef(name: 'Neuro Smart Switch 4S', category: 'Smart Switches (Non-Touch)', icon: Icons.toggle_on_rounded, deviceType: DeviceType.neuroSmartSwitch, ssidPattern: 'Neuro_Smart_Switch_4S', switchCount: 4),

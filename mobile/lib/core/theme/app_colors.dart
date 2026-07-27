@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Central color token system for Rollin Techno.
+/// Central color token system for Neuro Touch.
 class AppColors {
   AppColors._();
 
