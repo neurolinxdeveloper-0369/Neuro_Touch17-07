@@ -375,6 +375,14 @@ class ProvisionNotifier extends StateNotifier<ProvisionState> {
   /// Retry from error state — go back to network choice
   void retry() {
     _pollTimer?.cancel();
+    if (state.tempDeviceId.isEmpty) {
+      state = state.copyWith(
+        step: ProvisionStep.error,
+        errorMessage: 'Setup must be restarted because a device ID could not be generated. Please tap the Back button and try again with an active internet connection.',
+        isLoading: false,
+      );
+      return;
+    }
     state = state.copyWith(
       step: ProvisionStep.networkChoice,
       errorMessage: null,
