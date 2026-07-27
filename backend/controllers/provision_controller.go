@@ -65,7 +65,9 @@ func MACConfirmEndpoint(c *fiber.Ctx) error {
 				"error":   "Failed to update device: " + err.Error(),
 			})
 		}
-	} else if tempDeviceID != "" {
+	}
+
+	if tempDeviceID != "" {
 		// Store in memory so CheckProvisionStatus can see it
 		PendingProvisionings.Lock()
 		PendingProvisionings.Devices[tempDeviceID] = mac
@@ -360,7 +362,11 @@ func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 	mac := &input.MACAddress
 
 	var device models.Device
-	err := tx.First(&device, "id = ?", finalDeviceID).Error
+	query := tx.Where("id = ?", finalDeviceID)
+	if input.MACAddress != "" {
+		query = query.Or("mac_address = ?", input.MACAddress)
+	}
+	err := query.First(&device).Error
 
 	if err != nil {
 		// Create new device entry
