@@ -96,37 +96,42 @@ class MqttController extends StateNotifier<MqttState> {
 
   void _handleMessage(MqttMessage msg) {
     final parts = msg.topic.split('/');
-    // Topic: nt/v1/{deviceId}/{direction}/{action}
-    if (parts.length < 4 || parts[0] != 'nt' || parts[1] != 'v1') return;
+    if (parts.length < 3) return;
 
-    final deviceId = parts[2];
-    final direction = parts[3];
-
-    // Handle Gas Stove Controller specific topics
-    if (parts.length >= 4 && parts[0] == 'tele' && parts[1] == 'stove') {
+    // Handle Gas Stove Controller specific topics: tele/stove/{deviceId}/...
+    if (parts[0] == 'tele' && parts[1] == 'stove') {
+      final deviceId = parts[2];
+      final direction = parts.length > 3 ? parts[3] : '';
+      
       _updateLastSeen(deviceId);
-      if (direction == 'lwt') {
+      if (direction.toLowerCase() == 'lwt') {
         _handleDeviceStatus(deviceId, msg.payload);
-      } else if (direction == 'status') {
+      } else if (direction.toLowerCase() == 'status') {
         // payload contains 'motors' array, extract it as telemetry/state
         _handleTelemetry(deviceId, 'gas', msg.payload);
       }
       return;
     }
 
+    // Standard architecture: nt/v1/{deviceId}/{direction}/{action}
+    if (parts.length < 4 || parts[0] != 'nt' || parts[1] != 'v1') return;
+
+    final deviceId = parts[2];
+    final direction = parts[3];
+
     // Update last seen for ANY message from device
     _updateLastSeen(deviceId);
 
-    if (direction == 'lwt') {
+    if (direction.toLowerCase() == 'lwt') {
       _handleDeviceStatus(deviceId, msg.payload);
       return;
     }
 
-    if (parts.length >= 5 && direction == 'stat') {
+    if (parts.length >= 5 && direction.toLowerCase() == 'stat') {
       final action = parts[4];
-      if (action == 'state') {
+      if (action.toLowerCase() == 'state') {
         _handleStateUpdate(deviceId, msg.payload);
-      } else if (action == 'telemetry') {
+      } else if (action.toLowerCase() == 'telemetry') {
         _handleTelemetry(deviceId, 'telemetry', msg.payload);
       }
     }

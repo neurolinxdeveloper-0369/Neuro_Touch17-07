@@ -40,20 +40,29 @@ class AppButton extends StatelessWidget {
                 Icon(icon, size: 20),
                 const SizedBox(width: 8),
               ],
-              Text(label, style: AppTypography.button),
+              Text(
+                label,
+                style: AppTypography.button.copyWith(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           );
+
+    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
 
     switch (type) {
       case AppButtonType.primary:
         return SizedBox(
           width: width ?? double.infinity,
-          height: 56,
+          height: 50,
           child: ElevatedButton(
             onPressed: isLoading ? null : onPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
+              shape: shape,
             ),
             child: content,
           ),
@@ -61,13 +70,14 @@ class AppButton extends StatelessWidget {
       case AppButtonType.secondary:
         return SizedBox(
           width: width ?? double.infinity,
-          height: 56,
+          height: 50,
           child: ElevatedButton(
             onPressed: isLoading ? null : onPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryLight.withValues(alpha: 0.1),
               foregroundColor: AppColors.primary,
               elevation: 0,
+              shape: shape,
             ),
             child: content,
           ),
@@ -75,12 +85,12 @@ class AppButton extends StatelessWidget {
       case AppButtonType.outline:
         return SizedBox(
           width: width ?? double.infinity,
-          height: 56,
+          height: 50,
           child: OutlinedButton(
             onPressed: isLoading ? null : onPressed,
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: AppColors.primary),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: shape,
             ),
             child: content,
           ),
@@ -88,6 +98,7 @@ class AppButton extends StatelessWidget {
       case AppButtonType.text:
         return TextButton(
           onPressed: isLoading ? null : onPressed,
+          style: TextButton.styleFrom(shape: shape),
           child: content,
         );
     }

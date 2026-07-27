@@ -95,15 +95,24 @@ class MqttService {
             MqttPublishPayload.bytesToStringAsString(message.payload.message);
 
         try {
-          final payload =
-              jsonDecode(payloadStr) as Map<String, dynamic>;
+          final payload = jsonDecode(payloadStr) as Map<String, dynamic>;
           _messageController.add(MqttMessage(
             topic: topic,
             payload: payload,
             receivedAt: DateTime.now(),
           ));
         } catch (_) {
-          // Non-JSON message — ignore
+          // Non-JSON message — handle common plain text LWT payloads
+          final lower = payloadStr.trim().toLowerCase();
+          if (topic.toLowerCase().endsWith('/lwt')) {
+            if (lower == 'online' || lower == 'offline') {
+              _messageController.add(MqttMessage(
+                topic: topic,
+                payload: {'status': lower},
+                receivedAt: DateTime.now(),
+              ));
+            }
+          }
         }
       }
     });

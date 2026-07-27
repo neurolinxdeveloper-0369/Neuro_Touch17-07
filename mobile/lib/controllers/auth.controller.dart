@@ -134,12 +134,17 @@ class AuthController extends StateNotifier<AuthState> {
     String? name,
   }) async {
     state = state.copyWith(status: AuthStatus.loading, clearError: true);
+    final stopwatch = Stopwatch()..start();
     try {
       final user = await _repo.verifyOtpLogin(
         phone: phone,
         otp: otp,
         name: name,
       );
+      final elapsed = stopwatch.elapsedMilliseconds;
+      if (elapsed < 3000) {
+        await Future.delayed(Duration(milliseconds: 3000 - elapsed));
+      }
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
     } catch (e) {
       state = state.copyWith(

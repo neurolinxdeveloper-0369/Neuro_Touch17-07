@@ -17,6 +17,7 @@ class AuthTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
   final ValueChanged<String>? onChanged;
+  final bool autofocus;
 
   const AuthTextField({
     super.key,
@@ -33,6 +34,7 @@ class AuthTextField extends StatelessWidget {
     this.textInputAction,
     this.onSubmitted,
     this.onChanged,
+    this.autofocus = false,
   });
 
   @override
@@ -59,23 +61,38 @@ class AuthTextField extends StatelessWidget {
           validator: validator,
           maxLength: maxLength,
           enabled: enabled,
+          autofocus: autofocus,
           textInputAction: textInputAction,
           onFieldSubmitted: onSubmitted,
           onChanged: onChanged,
           style: AppTypography.bodyLarge.copyWith(
             color: AppColors.textPrimary(isDark),
+            fontSize: 16,
           ),
           decoration: InputDecoration(
             hintText: hint,
             counterText: '',
+            contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
             prefixIcon: prefixIcon != null 
-                ? Icon(prefixIcon, size: 20, color: AppColors.textSecondary(isDark)) 
+                ? Icon(prefixIcon, size: 22, color: AppColors.textSecondary(isDark)) 
                 : null,
             suffixIcon: suffixIcon,
             fillColor: isDark ? AppColors.glassDark(0.06) : Colors.white,
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: AppColors.borderColor(isDark)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 1.5),
             ),
           ),
         ),
