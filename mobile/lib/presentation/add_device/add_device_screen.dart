@@ -87,7 +87,7 @@ class _AddDeviceScreenState extends ConsumerState<AddDeviceScreen> {
     const DeviceModelDef(name: 'Touch Panel 8S', category: 'Custom IoT Device', icon: Icons.settings_input_component_rounded, deviceType: DeviceType.customTouchPanel, ssidPattern: 'Touch_Panel_8S', switchCount: 8),
 
     // Smart Kitchen
-    const DeviceModelDef(name: 'Gas Stove Controller', category: 'Smart Kitchen', icon: Icons.local_fire_department_rounded, deviceType: DeviceType.gasControl, ssidPattern: 'GasKnob_', switchCount: 0),
+    const DeviceModelDef(name: 'Gas Stove Controller', category: 'Smart Kitchen', icon: Icons.local_fire_department_rounded, deviceType: DeviceType.gasControl, ssidPattern: 'GasKnob-', switchCount: 0),
   ];
 
   @override
