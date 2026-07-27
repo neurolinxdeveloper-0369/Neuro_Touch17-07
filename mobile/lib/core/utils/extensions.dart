@@ -15,44 +15,98 @@ extension BuildContextExtensions on BuildContext {
   bool get isTablet => screenWidth >= 600 && screenWidth < 1200;
   bool get isDesktop => screenWidth >= 1200;
 
-  void showSnackBar(String message, {Color? backgroundColor, IconData? icon}) {
-    ScaffoldMessenger.of(this).hideCurrentSnackBar();
-    ScaffoldMessenger.of(this).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            if (icon != null) ...[
-              Icon(icon, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-            ],
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: backgroundColor ??
-            (isDark ? AppColors.cardBackground(true) : Colors.grey[900]),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
-      ),
+  void _showAppDialog(String title, String message, {Color? color, IconData? icon}) {
+    showDialog(
+      context: this,
+      builder: (context) {
+        final isDark = context.isDark;
+        final themeColor = color ?? AppColors.primary;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: themeColor.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  spreadRadius: 5,
+                ),
+              ],
+              border: Border.all(color: themeColor.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: themeColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: themeColor, size: 36),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: themeColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Dismiss', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  void showErrorSnackBar(String message) => showSnackBar(
+  void showErrorSnackBar(String message) => _showAppDialog(
+        'Error',
         message,
-        backgroundColor: AppColors.error,
+        color: AppColors.error,
         icon: Icons.error_outline_rounded,
       );
 
-  void showSuccessSnackBar(String message) => showSnackBar(
+  void showSuccessSnackBar(String message) => _showAppDialog(
+        'Success',
         message,
-        backgroundColor: AppColors.success,
+        color: AppColors.success,
         icon: Icons.check_circle_outline_rounded,
       );
 
-  void showInfoSnackBar(String message) => showSnackBar(
+  void showInfoSnackBar(String message) => _showAppDialog(
+        'Information',
         message,
-        backgroundColor: AppColors.info,
+        color: AppColors.info,
         icon: Icons.info_outline_rounded,
       );
 }

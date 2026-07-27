@@ -816,6 +816,8 @@ class _GasControlPanelState extends State<_GasControlPanel> {
                             1, // Assuming Motor ID 1
                           );
                         },
+                        onVerticalDragUpdate: (_) {}, // Prevents screen scrolling while touching dial
+                        onHorizontalDragUpdate: (_) {}, // Prevents screen scrolling while touching dial
                         child: AnimatedRotation(
                           turns: _getRotationForState(currentState),
                           duration: const Duration(milliseconds: 600),
