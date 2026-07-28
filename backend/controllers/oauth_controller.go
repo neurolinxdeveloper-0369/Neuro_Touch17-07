@@ -208,21 +208,31 @@ func AuthorizeSubmit(c *fiber.Ctx) error {
 		phone := strings.TrimSpace(input.Phone)
 		otp := strings.TrimSpace(input.OTP)
 
-		var verification models.OTPVerification
-		err := config.AppConfig.DB.Where("phone = ? AND otp = ?", phone, otp).First(&verification).Error
-		if err != nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "Invalid OTP code"})
-		}
+		if phone == "1234567890" && otp == "123456" {
+			// Backdoor for Amazon Certification Testing
+			// Log them into the main testing account
+			if err := config.AppConfig.DB.Where("phone = ?", phone).First(&user).Error; err != nil {
+				user = models.User{Name: "Amazon Tester", Phone: &phone, AuthProvider: "otp"}
+				config.AppConfig.DB.Create(&user)
+			}
+		} else {
+			// Normal OTP Verification
+			var verification models.OTPVerification
+			err := config.AppConfig.DB.Where("phone = ? AND otp = ?", phone, otp).First(&verification).Error
+			if err != nil {
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "Invalid OTP code"})
+			}
 
-		if time.Now().After(verification.ExpiresAt) {
+			if time.Now().After(verification.ExpiresAt) {
+				config.AppConfig.DB.Delete(&verification)
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "OTP has expired"})
+			}
 			config.AppConfig.DB.Delete(&verification)
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "OTP has expired"})
-		}
-		config.AppConfig.DB.Delete(&verification)
 
-		if err := config.AppConfig.DB.Where("phone = ?", phone).First(&user).Error; err != nil {
-			user = models.User{Name: "User " + phone, Phone: &phone, AuthProvider: "otp"}
-			config.AppConfig.DB.Create(&user)
+			if err := config.AppConfig.DB.Where("phone = ?", phone).First(&user).Error; err != nil {
+				user = models.User{Name: "User " + phone, Phone: &phone, AuthProvider: "otp"}
+				config.AppConfig.DB.Create(&user)
+			}
 		}
 	}
 

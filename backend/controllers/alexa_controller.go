@@ -122,6 +122,37 @@ func handleDiscovery(c *fiber.Ctx, user models.User, messageId string) error {
 		}
 	}
 
+	// Add virtual device for Amazon Certification tester
+	if user.Phone != nil && *user.Phone == "1234567890" {
+		endpoints = append(endpoints, map[string]interface{}{
+			"endpointId":        "test-device-1_1",
+			"manufacturerName":  "Neuro Touch",
+			"description":       "Virtual Smart Switch for Certification",
+			"friendlyName":      "Test Light",
+			"displayCategories": []string{"SWITCH"},
+			"cookie": map[string]string{
+				"mac": "test-device-1",
+			},
+			"capabilities": []map[string]interface{}{
+				{
+					"type":      "AlexaInterface",
+					"interface": "Alexa.PowerController",
+					"version":   "3",
+					"properties": map[string]interface{}{
+						"supported": []map[string]string{{"name": "powerState"}},
+						"proactivelyReported": true,
+						"retrievable":         true,
+					},
+				},
+				{
+					"type":      "AlexaInterface",
+					"interface": "Alexa",
+					"version":   "3",
+				},
+			},
+		})
+	}
+
 	response := map[string]interface{}{
 		"event": map[string]interface{}{
 			"header": map[string]string{
