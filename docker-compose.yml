@@ -1,27 +1,6 @@
 
 
 services:
-  # --- PostgreSQL Database ---
-  postgres:
-    image: postgres:16-alpine
-    container_name: neurotouch_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-neurotouch}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-neurotouch}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - neurotouch_net
-
   # --- EMQX MQTT Broker ---
   emqx:
     image: emqx/emqx:5.6.1
@@ -80,7 +59,7 @@ services:
       LETSENCRYPT_HOST: api.neurolinx.in
       LETSENCRYPT_EMAIL: admin@neurolinx.in
       PORT: 8080
-      DB_HOST: postgres
+      DB_HOST: host.docker.internal
       DB_PORT: 5432
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
@@ -94,10 +73,10 @@ services:
       OLLAMA_API_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
     depends_on:
-      postgres:
-        condition: service_healthy
       emqx:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - neurotouch_net
 
@@ -135,8 +114,6 @@ services:
       - neurotouch_net
 
 volumes:
-  postgres_data:
-    driver: local
   emqx_data:
     driver: local
   emqx_log:
