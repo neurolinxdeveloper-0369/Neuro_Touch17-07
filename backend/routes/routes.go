@@ -18,6 +18,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// --- Legal Routes ---
 	api.Get("/privacy", controllers.PrivacyPolicy)
+	api.Get("/terms", controllers.TermsOfUse)
 
 	// --- Public Auth Routes ---
 	auth := api.Group("/auth")
