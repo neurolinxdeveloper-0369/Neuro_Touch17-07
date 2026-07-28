@@ -7,7 +7,6 @@ import (
 
 	"neurotouch/config"
 	"neurotouch/models"
-	"neurotouch/services"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -164,7 +163,7 @@ func handlePowerControl(c *fiber.Ctx, req AlexaDirective, user models.User, turn
 	}
 	
 	payloadBytes, _ := json.Marshal(payload)
-	services.MqttClient.Publish(topic, 1, false, payloadBytes)
+	MqttPublish(topic, string(payloadBytes))
 
 	// Respond with state report
 	powerState := "OFF"
