@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   # --- PostgreSQL Database ---
@@ -75,6 +75,10 @@ services:
     ports:
       - "8080:8080"
     environment:
+      VIRTUAL_HOST: api.neurolinx.in
+      VIRTUAL_PORT: 8080
+      LETSENCRYPT_HOST: api.neurolinx.in
+      LETSENCRYPT_EMAIL: admin@neurolinx.in
       PORT: 8080
       DB_HOST: postgres
       DB_PORT: 5432
@@ -97,6 +101,39 @@ services:
     networks:
       - neurotouch_net
 
+  # --- Auto SSL Reverse Proxy ---
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/nginx/certs:ro
+      - vhost.d:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - neurotouch_net
+
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: nginx-proxy-acme
+    restart: unless-stopped
+    environment:
+      - DEFAULT_EMAIL=admin@neurolinx.in
+    volumes:
+      - certs:/etc/nginx/certs:rw
+      - vhost.d:/etc/nginx/vhost.d:rw
+      - html:/usr/share/nginx/html:rw
+      - acme:/etc/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - nginx-proxy
+    networks:
+      - neurotouch_net
+
 volumes:
   postgres_data:
     driver: local
@@ -105,6 +142,14 @@ volumes:
   emqx_log:
     driver: local
   ollama_data:
+    driver: local
+  certs:
+    driver: local
+  vhost.d:
+    driver: local
+  html:
+    driver: local
+  acme:
     driver: local
 
 networks:

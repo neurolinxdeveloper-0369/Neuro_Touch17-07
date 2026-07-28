@@ -38,6 +38,7 @@ func main() {
 		&models.GasMotor{},
 		&models.DailyEnergyRecord{},
 		&models.EnergyReading{},
+		&models.OAuthToken{},
 	)
 	if err != nil {
 		log.Fatalf("Failed database migration: %v", err)
