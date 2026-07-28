@@ -40,6 +40,7 @@ func RenderAuthorizePage(c *fiber.Ctx) error {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Link Neuro Touch with Alexa</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #111844; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background-color: #1e265c; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 100%%; max-width: 400px; text-align: center; }
@@ -57,6 +58,25 @@ func RenderAuthorizePage(c *fiber.Ctx) error {
         <div id="error1" class="error hidden"></div>
         <input type="text" id="phone" placeholder="Phone Number (e.g. 1234567890)">
         <button onclick="sendOTP()">Send OTP</button>
+
+        <div style="margin: 20px 0; color: #aaa;">OR</div>
+
+        <div id="g_id_onload"
+             data-client_id="%s"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-callback="handleGoogleLogin"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="rectangular"
+             data-theme="outline"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="left"
+             style="display: flex; justify-content: center;">
+        </div>
     </div>
 
     <div class="card hidden" id="step2">
@@ -116,10 +136,30 @@ func RenderAuthorizePage(c *fiber.Ctx) error {
                 console.error(e);
             }
         }
+
+        async function handleGoogleLogin(response) {
+            try {
+                const res = await fetch('/api/v1/oauth/authorize', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id_token: response.credential, state, redirect_uri: redirectUri, client_id: clientId})
+                });
+                const data = await res.json();
+                if(data.success) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    const err = document.getElementById('error1');
+                    err.innerText = data.error || "Google login failed";
+                    err.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
     </script>
 </body>
 </html>
-`, state, redirectURI, clientID)
+`, config.AppConfig.GoogleClientID, state, redirectURI, clientID)
 
 	c.Set("Content-Type", "text/html")
 	return c.SendString(html)
@@ -128,6 +168,7 @@ func RenderAuthorizePage(c *fiber.Ctx) error {
 type AuthorizeSubmitInput struct {
 	Phone       string `json:"phone"`
 	OTP         string `json:"otp"`
+	IdToken     string `json:"id_token"`
 	State       string `json:"state"`
 	RedirectURI string `json:"redirect_uri"`
 	ClientID    string `json:"client_id"`
@@ -140,28 +181,47 @@ func AuthorizeSubmit(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "Invalid request"})
 	}
 
-	phone := strings.TrimSpace(input.Phone)
-	otp := strings.TrimSpace(input.OTP)
-
-	// Verify OTP
-	var verification models.OTPVerification
-	err := config.AppConfig.DB.Where("phone = ? AND otp = ?", phone, otp).First(&verification).Error
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "Invalid OTP code"})
-	}
-
-	if time.Now().After(verification.ExpiresAt) {
-		config.AppConfig.DB.Delete(&verification)
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "OTP has expired"})
-	}
-	config.AppConfig.DB.Delete(&verification)
-
-	// Find User (must exist since they are linking account, or create if new)
 	var user models.User
-	if err := config.AppConfig.DB.Where("phone = ?", phone).First(&user).Error; err != nil {
-		// Create basic user if not exists
-		user = models.User{Name: "User " + phone, Phone: &phone, AuthProvider: "otp"}
-		config.AppConfig.DB.Create(&user)
+
+	if input.IdToken != "" {
+		// Handle Google Sign-In
+		resp, err := http.Get(fmt.Sprintf("https://oauth2.googleapis.com/tokeninfo?id_token=%s", url.QueryEscape(input.IdToken)))
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "Failed to contact Google"})
+		}
+		defer resp.Body.Close()
+
+		var tokenInfo GoogleTokenInfo
+		if err := json.NewDecoder(resp.Body).Decode(&tokenInfo); err != nil || tokenInfo.Error != "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "Invalid Google token"})
+		}
+
+		if err := config.AppConfig.DB.Where("email = ?", tokenInfo.Email).First(&user).Error; err != nil {
+			// Create user if not exists
+			user = models.User{Name: tokenInfo.Name, Email: &tokenInfo.Email, AuthProvider: "google"}
+			config.AppConfig.DB.Create(&user)
+		}
+	} else {
+		// Handle Phone OTP
+		phone := strings.TrimSpace(input.Phone)
+		otp := strings.TrimSpace(input.OTP)
+
+		var verification models.OTPVerification
+		err := config.AppConfig.DB.Where("phone = ? AND otp = ?", phone, otp).First(&verification).Error
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "Invalid OTP code"})
+		}
+
+		if time.Now().After(verification.ExpiresAt) {
+			config.AppConfig.DB.Delete(&verification)
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "OTP has expired"})
+		}
+		config.AppConfig.DB.Delete(&verification)
+
+		if err := config.AppConfig.DB.Where("phone = ?", phone).First(&user).Error; err != nil {
+			user = models.User{Name: "User " + phone, Phone: &phone, AuthProvider: "otp"}
+			config.AppConfig.DB.Create(&user)
+		}
 	}
 
 	// Generate Authorization Code

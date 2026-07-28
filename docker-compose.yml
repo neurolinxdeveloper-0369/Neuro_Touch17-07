@@ -93,6 +93,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-super_secret_neuro_touch_key}
       OLLAMA_API_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     depends_on:
       postgres:
         condition: service_healthy
