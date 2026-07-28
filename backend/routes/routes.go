@@ -16,6 +16,9 @@ func SetupRoutes(app *fiber.App) {
 	api.Post("/oauth/token", controllers.Token)
 	api.Post("/alexa/directive", controllers.AlexaEndpoint)
 
+	// --- Legal Routes ---
+	api.Get("/privacy", controllers.PrivacyPolicy)
+
 	// --- Public Auth Routes ---
 	auth := api.Group("/auth")
 	auth.Post("/google", controllers.GoogleAuth)
