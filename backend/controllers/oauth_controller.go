@@ -232,6 +232,8 @@ func AuthorizeSubmit(c *fiber.Ctx) error {
 	oauthToken := models.OAuthToken{
 		UserID:            user.ID,
 		AuthorizationCode: authCode,
+		AccessToken:       generateRandomHex(32),
+		RefreshToken:      generateRandomHex(32),
 		ExpiresAt:         time.Now().Add(10 * time.Minute),
 	}
 	
