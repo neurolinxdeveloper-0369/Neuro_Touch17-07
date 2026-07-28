@@ -11,9 +11,9 @@ func SetupRoutes(app *fiber.App) {
 	api := app.Group("/api/v1")
 
 	// --- Alexa & OAuth 2.0 Account Linking Routes ---
-	app.Get("/oauth/authorize", controllers.RenderAuthorizePage)
-	app.Post("/oauth/authorize", controllers.AuthorizeSubmit)
-	app.Post("/oauth/token", controllers.Token)
+	api.Get("/oauth/authorize", controllers.RenderAuthorizePage)
+	api.Post("/oauth/authorize", controllers.AuthorizeSubmit)
+	api.Post("/oauth/token", controllers.Token)
 	api.Post("/alexa/directive", controllers.AlexaEndpoint)
 
 	// --- Public Auth Routes ---
