@@ -138,7 +138,7 @@ services:
 
   # --- RMS Java Backend ---
   rms:
-    image: openjdk:17-jdk-slim
+    image: eclipse-temurin:17-jre-alpine
     container_name: rms_backend
     restart: unless-stopped
     volumes:
