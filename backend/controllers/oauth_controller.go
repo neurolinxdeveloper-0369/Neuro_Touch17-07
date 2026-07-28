@@ -75,7 +75,7 @@ func RenderAuthorizePage(c *fiber.Ctx) error {
         async function sendOTP() {
             const phone = document.getElementById('phone').value;
             try {
-                const res = await fetch('/api/v1/auth/send-otp', {
+                const res = await fetch('/api/v1/auth/otp/send', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({phone: phone})
@@ -99,7 +99,7 @@ func RenderAuthorizePage(c *fiber.Ctx) error {
             const phone = document.getElementById('phone').value;
             const otp = document.getElementById('otp').value;
             try {
-                const res = await fetch('/oauth/authorize', {
+                const res = await fetch('/api/v1/oauth/authorize', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({phone, otp, state, redirect_uri: redirectUri, client_id: clientId})
