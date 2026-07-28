@@ -81,8 +81,6 @@ func AlexaEndpoint(c *fiber.Ctx) error {
 }
 
 func handleDiscovery(c *fiber.Ctx, user models.User, messageId string) error {
-	var devices []models.Device
-	
 	// Get all devices owned by user's homes
 	// Since user.Homes is many-to-many, we fetch user's homes first
 	config.AppConfig.DB.Preload("Homes.Devices.Switches").First(&user)
