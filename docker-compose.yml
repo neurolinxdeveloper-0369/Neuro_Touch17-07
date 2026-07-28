@@ -109,6 +109,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      DEFAULT_HOST: rms_backend
     volumes:
       - certs:/etc/nginx/certs:ro
       - vhost.d:/etc/nginx/vhost.d
@@ -131,6 +133,21 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - nginx-proxy
+    networks:
+      - neurotouch_net
+
+  # --- RMS Java Backend ---
+  rms:
+    image: openjdk:17-jdk-slim
+    container_name: rms_backend
+    restart: unless-stopped
+    volumes:
+      - /root/RMS/RMS_Ver1.1-24-07:/app
+    working_dir: /app
+    command: sh -c "java -jar target/*.jar"
+    environment:
+      VIRTUAL_HOST: rms_backend
+      VIRTUAL_PORT: 80
     networks:
       - neurotouch_net
 
