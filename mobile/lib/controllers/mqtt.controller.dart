@@ -167,7 +167,10 @@ class MqttController extends StateNotifier<MqttState> {
                 v.map((k2, v2) => MapEntry(k2, Map<String, dynamic>.from(v2)))))));
 
     newFeatures[deviceId] ??= {};
-    newFeatures[deviceId]!['switch'] = formattedSwitches;
+    newFeatures[deviceId]!['switch'] = {
+      ...newFeatures[deviceId]!['switch'] ?? {},
+      ...formattedSwitches,
+    };
 
     state = state.copyWith(deviceFeatures: newFeatures);
   }
