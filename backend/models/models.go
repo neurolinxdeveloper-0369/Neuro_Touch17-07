@@ -74,9 +74,10 @@ type Device struct {
 	DeviceType     string         `gorm:"type:varchar(30);not null" json:"device_type"` // touch_panel | ir_blaster | lift_panel | energy_meter | temp_monitor | gas_control
 	Name           string         `gorm:"not null" json:"name"`
 	MACAddress     *string        `gorm:"type:varchar(17);uniqueIndex;column:mac_address" json:"mac_address"` // e.g. AA:BB:CC:DD:EE:FF
-	SSIDPattern    *string        `gorm:"type:varchar(100)" json:"ssid_pattern"`
-	FirmwareVersion *string       `gorm:"type:varchar(20)" json:"firmware_version"`
-	IsOnline       bool           `gorm:"default:false" json:"is_online"`
+	SSIDPattern     *string        `gorm:"type:varchar(100)" json:"ssid_pattern"`
+	FirmwareVersion *string        `gorm:"type:varchar(20)" json:"firmware_version"`
+	RSSI            *int           `json:"rssi"`
+	IsOnline        bool           `gorm:"default:false" json:"is_online"`
 	LastSeen       *time.Time     `json:"last_seen"`
 	SwitchCount    int            `gorm:"default:1" json:"switch_count"`
 	Config         string         `gorm:"type:text;default:'{}'" json:"config"` // JSON blob

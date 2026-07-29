@@ -176,6 +176,11 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 				fwStr := fmt.Sprintf("%v", fw)
 				updates["firmware_version"] = &fwStr
 			}
+			if rssi, exists := data["rssi"]; exists {
+				if r, err := strconv.Atoi(fmt.Sprintf("%v", rssi)); err == nil {
+					updates["rssi"] = &r
+				}
+			}
 		}
 
 		db.Model(&models.Device{}).Where("id = ?", deviceID).Updates(updates)
@@ -201,6 +206,11 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 				if fw, exists := data["fw_version"]; exists {
 					fwStr := fmt.Sprintf("%v", fw)
 					updates["firmware_version"] = &fwStr
+				}
+				if rssi, exists := data["rssi"]; exists {
+					if r, err := strconv.Atoi(fmt.Sprintf("%v", rssi)); err == nil {
+						updates["rssi"] = &r
+					}
 				}
 				
 				_, hasEnergyKwh := data["energy_kwh"]
