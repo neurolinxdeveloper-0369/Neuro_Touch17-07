@@ -3,7 +3,7 @@ class MqttConstants {
 
   static const String host = String.fromEnvironment(
     'MQTT_HOST',
-    defaultValue: '192.168.1.100',
+    defaultValue: '129.121.120.144',
   );
 
   static const int port = 1883;
