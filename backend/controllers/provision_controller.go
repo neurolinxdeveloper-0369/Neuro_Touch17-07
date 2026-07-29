@@ -3,7 +3,6 @@ package controllers
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"neurotouch/config"
@@ -13,65 +12,44 @@ import (
 	"github.com/google/uuid"
 )
 
-var PendingProvisionings = struct {
-	sync.RWMutex
-	Devices map[string]string // map[tempDeviceID]MACAddress
-}{
-	Devices: make(map[string]string),
-}
-
 // MACConfirmEndpoint is a public endpoint called by the ESP12F panel
 // once it successfully connects to the local Wi-Fi.
 func MACConfirmEndpoint(c *fiber.Ctx) error {
 	mac := c.Query("mac")
 	tempDeviceID := c.Query("device_id")
 
-	if mac == "" {
+	if mac == "" || tempDeviceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
-			"error":   "Missing MAC address",
+			"error":   "Missing MAC address or device_id",
 		})
 	}
 
 	mac = strings.ToUpper(mac)
 	now := time.Now()
 
+	// 1. Authenticate via ProvisioningSession
+	var session models.ProvisioningSession
+	if err := config.AppConfig.DB.First(&session, "device_id = ?", tempDeviceID).Error; err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"success": false,
+			"error":   "Unauthorized or invalid device_id",
+		})
+	}
+
+	// 2. Mark session as confirmed
+	session.MACAddress = &mac
+	session.IsConfirmed = true
+	config.AppConfig.DB.Save(&session)
+
+	// 3. Update existing device if it happens to exist
 	var device models.Device
-	found := false
-
-	// First try by ID (if provided)
-	if tempDeviceID != "" {
-		if err := config.AppConfig.DB.First(&device, "id = ?", tempDeviceID).Error; err == nil {
-			found = true
-		}
-	}
-
-	// Then try by MAC
-	if !found {
-		if err := config.AppConfig.DB.First(&device, "mac_address = ?", mac).Error; err == nil {
-			found = true
-		}
-	}
-
-	if found {
-		// Update existing record
-		if err := config.AppConfig.DB.Model(&device).Updates(models.Device{
+	if err := config.AppConfig.DB.First(&device, "id = ? OR mac_address = ?", tempDeviceID, mac).Error; err == nil {
+		config.AppConfig.DB.Model(&device).Updates(models.Device{
 			MACAddress: &mac,
 			IsOnline:   true,
 			LastSeen:   &now,
-		}).Error; err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"success": false,
-				"error":   "Failed to update device: " + err.Error(),
-			})
-		}
-	}
-
-	if tempDeviceID != "" {
-		// Store in memory so CheckProvisionStatus can see it
-		PendingProvisionings.Lock()
-		PendingProvisionings.Devices[tempDeviceID] = mac
-		PendingProvisionings.Unlock()
+		})
 	}
 
 	return c.JSON(fiber.Map{
@@ -88,9 +66,21 @@ func MACConfirmEndpoint(c *fiber.Ctx) error {
 // GenerateDeviceUuid handles generating a unique ID for a new hardware device
 func GenerateDeviceUuid(c *fiber.Ctx) error {
 	newUUID := uuid.New().String()
+	deviceID := "nt-" + newUUID[:8]
+
+	session := models.ProvisioningSession{
+		DeviceID: deviceID,
+	}
+	if err := config.AppConfig.DB.Create(&session).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Failed to initialize provisioning session",
+		})
+	}
+
 	return c.JSON(fiber.Map{
 		"success":   true,
-		"device_id": "nt-" + newUUID[:8],
+		"device_id": deviceID,
 	})
 }
 
@@ -248,18 +238,17 @@ func CheckProvisionStatus(c *fiber.Ctx) error {
 		})
 	}
 
-	// 2. Check pending memory map (waiting for app to finish provisioning)
-	PendingProvisionings.RLock()
-	pendingMAC, pending := PendingProvisionings.Devices[deviceID]
-	PendingProvisionings.RUnlock()
-
-	if pending {
-		return c.JSON(fiber.Map{
-			"success":     true,
-			"status":      "online",
-			"mac_address": pendingMAC,
-			"device_id":   deviceID,
-		})
+	// 2. Check ProvisioningSession
+	var session models.ProvisioningSession
+	if err := config.AppConfig.DB.First(&session, "device_id = ?", deviceID).Error; err == nil {
+		if session.IsConfirmed {
+			return c.JSON(fiber.Map{
+				"success":     true,
+				"status":      "online",
+				"mac_address": session.MACAddress,
+				"device_id":   deviceID,
+			})
+		}
 	}
 
 	return c.JSON(fiber.Map{

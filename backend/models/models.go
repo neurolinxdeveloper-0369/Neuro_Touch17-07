@@ -15,6 +15,14 @@ type User struct {
 	Homes        []Home    `gorm:"many2many:home_members;joinForeignKey:UserID;joinReferences:HomeID" json:"-"`
 }
 
+type ProvisioningSession struct {
+	DeviceID    string    `gorm:"primaryKey;type:varchar(50)" json:"device_id"`
+	MACAddress  *string   `gorm:"type:varchar(17)" json:"mac_address"`
+	IsConfirmed bool      `gorm:"default:false" json:"is_confirmed"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type OTPVerification struct {
 	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	Phone     string    `gorm:"uniqueIndex;type:varchar(20);not null" json:"phone"`
