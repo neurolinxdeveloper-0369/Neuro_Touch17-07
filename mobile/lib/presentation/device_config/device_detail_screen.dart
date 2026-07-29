@@ -14,16 +14,29 @@ import '../common/widgets/glass_panel.dart';
 import '../common/widgets/app_section_header.dart';
 import '../add_device/provisioning/widgets/circular_switch.dart';
 
-class DeviceDetailScreen extends ConsumerWidget {
+class DeviceDetailScreen extends ConsumerStatefulWidget {
   final String deviceId;
 
   const DeviceDetailScreen({super.key, required this.deviceId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeviceDetailScreen> createState() => _DeviceDetailScreenState();
+}
+
+class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(mqttControllerProvider.notifier).requestDeviceStatus(widget.deviceId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = context.isDark;
     final allDevices = ref.watch(dashboardControllerProvider).devices;
-    final device = allDevices.firstWhereOrNull((d) => d.id == deviceId);
+    final device = allDevices.firstWhereOrNull((d) => d.id == widget.deviceId);
     final mqttState = ref.watch(mqttControllerProvider);
 
     if (device == null) {
@@ -33,7 +46,7 @@ class DeviceDetailScreen extends ConsumerWidget {
       );
     }
 
-    final isOnline = mqttState.isDeviceOnline(deviceId);
+    final isOnline = mqttState.isDeviceOnline(widget.deviceId);
 
     return AppScreenWrapper(
       title: device.name,
@@ -49,12 +62,12 @@ class DeviceDetailScreen extends ConsumerWidget {
             if (device.switchCount > 0)
               _SwitchPanel(
                 device: device,
-                onToggle: (idx, state) => ref.read(mqttControllerProvider.notifier).publishSwitchCommand(deviceId, idx, state),
+                onToggle: (idx, state) => ref.read(mqttControllerProvider.notifier).publishSwitchCommand(widget.deviceId, idx, state),
               ),
             if (device.deviceType == DeviceType.energyMeter) 
               _EnergyPanel(device: device, mqttState: mqttState),
-            if (device.deviceType == DeviceType.tempMonitor) _TempPanel(deviceId: deviceId, mqttState: mqttState),
-            if (device.deviceType == DeviceType.gasControl) _GasControlPanel(deviceId: deviceId, mqttState: mqttState),
+            if (device.deviceType == DeviceType.tempMonitor) _TempPanel(deviceId: widget.deviceId, mqttState: mqttState),
+            if (device.deviceType == DeviceType.gasControl) _GasControlPanel(deviceId: widget.deviceId, mqttState: mqttState),
             const SizedBox(height: 100),
           ],
         ),
@@ -128,6 +141,7 @@ class _SwitchPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mqttState = ref.watch(mqttControllerProvider);
+    final isOnline = ref.watch(deviceOnlineProvider(device.id));
 
     // Always iterate 1..switchCount so every switch gets an MQTT binding.
     // If a switch has a saved config, use its name/icon.
@@ -139,8 +153,12 @@ class _SwitchPanel extends ConsumerWidget {
 
     for (int i = 1; i <= device.switchCount; i++) {
       final config = device.switches.firstWhereOrNull((s) => s.switchIndex == i);
+      final configVal = device.config['$i'];
+      bool savedState = false;
+      if (configVal is bool) savedState = configVal;
+      
       switchStates[i] =
-          mqttState.getDeviceValue(device.id, 'switch', 'sw$i') as bool? ?? false;
+          mqttState.getDeviceValue(device.id, 'switch', 'sw$i') as bool? ?? savedState;
       switchNames[i] = config?.name ?? 'Switch $i';
       switchIcons[i] = config?.icon ?? 'lightbulb';
     }
@@ -158,6 +176,7 @@ class _SwitchPanel extends ConsumerWidget {
           switchNames: switchNames,
           switchIcons: switchIcons,
           isCustomLayout: device.deviceType == DeviceType.customTouchPanel,
+          isOnline: isOnline,
           onToggle: (idx, state) => onToggle(idx, state),
           onLongPress: (idx) {
             Navigator.push(
