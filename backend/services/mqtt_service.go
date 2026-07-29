@@ -284,8 +284,29 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 			}
 			db.Model(&models.Device{}).Where("id = ?", deviceID).Updates(updates)
 		} else if action == "state" {
-			// State updates are handled directly by EMQX Rules saving to Postgres.
-			// But we mark it online here just in case.
+			// Save the state to Postgres directly when MQTT status is received from hardware
+			var data map[string]interface{}
+			if err := json.Unmarshal([]byte(payload), &data); err == nil {
+				if sw, ok := data["switches"]; ok {
+					var device models.Device
+					if err := config.AppConfig.DB.Where("id = ?", deviceID).First(&device).Error; err == nil {
+						var currentConfig map[string]interface{}
+						if device.Config != "" {
+							json.Unmarshal([]byte(device.Config), &currentConfig)
+						}
+						if currentConfig == nil {
+							currentConfig = make(map[string]interface{})
+						}
+						if swMap, ok := sw.(map[string]interface{}); ok {
+							for k, v := range swMap {
+								currentConfig[k] = v
+							}
+						}
+						swBytes, _ := json.Marshal(currentConfig)
+						config.AppConfig.DB.Model(&models.Device{}).Where("id = ?", deviceID).Update("config", string(swBytes))
+					}
+				}
+			}
 			db.Model(&models.Device{}).Where("id = ?", deviceID).Update("is_online", true)
 		}
 	}
