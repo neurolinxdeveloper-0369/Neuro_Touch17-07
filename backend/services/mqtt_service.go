@@ -161,13 +161,28 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 
 	switch messageType {
 	case "lwt":
-		// Payload: {"uptime": 3600, "firmware": "v1.0.1"}
+		// Payload: {"uptime": 3600, "firmware": "v1.0.1"} or {"online": false} or "Offline"
 		var data map[string]interface{}
-		_ = json.Unmarshal([]byte(payload), &data)
+		err := json.Unmarshal([]byte(payload), &data)
+
+		isOnline := true
+		if err == nil {
+			if onlineVal, ok := data["online"].(bool); ok {
+				isOnline = onlineVal
+			} else if statusStr, ok := data["status"].(string); ok {
+				if strings.ToLower(statusStr) == "offline" {
+					isOnline = false
+				}
+			}
+		} else {
+			if strings.ToLower(strings.TrimSpace(payload)) == "offline" {
+				isOnline = false
+			}
+		}
 
 		now := time.Now()
 		updates := map[string]interface{}{
-			"is_online": true,
+			"is_online": isOnline,
 			"last_seen": &now,
 		}
 
