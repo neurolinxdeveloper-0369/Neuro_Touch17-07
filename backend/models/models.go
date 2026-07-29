@@ -131,10 +131,10 @@ type Schedule struct {
 
 type Telemetry struct {
 	ID         uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	DeviceID   string    `gorm:"type:varchar(50);not null;index" json:"device_id"`
-	Metric     string    `gorm:"type:varchar(50);not null" json:"metric"` // voltage, current, power, energy, temperature, humidity...
+	DeviceID   string    `gorm:"type:varchar(50);not null;index:idx_telemetry,priority:1" json:"device_id"`
+	Metric     string    `gorm:"type:varchar(50);not null;index:idx_telemetry,priority:2" json:"metric"`
 	Value      float64   `gorm:"not null" json:"value"`
-	RecordedAt time.Time `gorm:"index;default:now()" json:"recorded_at"`
+	RecordedAt time.Time `gorm:"index:idx_telemetry,priority:3;default:now()" json:"recorded_at"`
 }
 
 type Notification struct {

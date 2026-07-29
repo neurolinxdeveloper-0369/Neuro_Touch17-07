@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"math/rand"
-	"time"
+	"crypto/rand"
+	"math/big"
 
 	"neurotouch/config"
 	"neurotouch/models"
@@ -278,11 +278,12 @@ func GenerateInvite(c *fiber.Ctx) error {
 		})
 	}
 
-	// Generate clean random 6-character code (alphanumeric uppercase)
+	// Generate clean random 6-character code securely (alphanumeric uppercase)
 	const charset = "ABCDEFGHJKLMNOPQRSTUVWXYZ23456789"
 	b := make([]byte, 6)
 	for i := range b {
-		b[i] = charset[rand.Intn(len(charset))]
+		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		b[i] = charset[num.Int64()]
 	}
 	code := string(b)
 
@@ -466,6 +467,4 @@ func RemoveMember(c *fiber.Ctx) error {
 	})
 }
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+

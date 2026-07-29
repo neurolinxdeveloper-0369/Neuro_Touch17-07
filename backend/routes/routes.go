@@ -55,7 +55,19 @@ func SetupRoutes(app *fiber.App) {
 	protected.Put("/homes/:id", controllers.UpdateHome)
 	protected.Delete("/homes/:id", controllers.DeleteHome)
 	protected.Post("/homes/:id/invite", controllers.GenerateInvite)
-	protected.Post("/homes/join", controllers.JoinHome)
+
+	// Rate limiter for Join Home
+	joinLimiter := limiter.New(limiter.Config{
+		Max:        5,
+		Expiration: 1 * time.Minute,
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"success": false,
+				"error":   "Too many requests, please try again later.",
+			})
+		},
+	})
+	protected.Post("/homes/join", joinLimiter, controllers.JoinHome)
 
 	// Home Members
 	protected.Get("/homes/:id/members", controllers.GetMembers)

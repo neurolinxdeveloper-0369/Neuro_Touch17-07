@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"time"
 
 	"neurotouch/config"
@@ -94,34 +95,33 @@ func GetTelemetryHistory(c *fiber.Ctx) error {
 
 	var dataPoints []HistoryPoint
 
-	if resolution == "hourly" {
-		// Group by hour
-		query := `SELECT date_trunc('hour', recorded_at) as timestamp, 
-		                 avg(value) as value, 
-		                 avg(value) as avg_value, 
-		                 min(value) as min_value, 
-		                 max(value) as max_value 
-		          FROM telemetry 
-		          WHERE device_id = ? AND metric = ? AND recorded_at BETWEEN ? AND ? 
-		          GROUP BY timestamp 
-		          ORDER BY timestamp ASC`
-		rows, err := config.AppConfig.DB.Raw(query, deviceID, metric, fromTime, toTime).Rows()
-		if err == nil {
-			defer rows.Close()
-			for rows.Next() {
-				var p HistoryPoint
-				var avg, min, max float64
-				if err := rows.Scan(&p.Timestamp, &p.Value, &avg, &min, &max); err == nil {
-					p.AvgValue = &avg
-					p.MinValue = &min
-					p.MaxValue = &max
-					dataPoints = append(dataPoints, p)
-				}
+	if resolution == "hourly" || resolution == "daily" {
+		dialect := config.AppConfig.DB.Dialector.Name()
+		var timeTruncExpr string
+		
+		if dialect == "postgres" {
+			if resolution == "daily" {
+				timeTruncExpr = "date_trunc('day', recorded_at)"
+			} else {
+				timeTruncExpr = "date_trunc('hour', recorded_at)"
 			}
+		} else if dialect == "sqlite" {
+			if resolution == "daily" {
+				timeTruncExpr = "strftime('%Y-%m-%d 00:00:00', recorded_at)"
+			} else {
+				timeTruncExpr = "strftime('%Y-%m-%d %H:00:00', recorded_at)"
+			}
+		} else if dialect == "mysql" {
+			if resolution == "daily" {
+				timeTruncExpr = "DATE_FORMAT(recorded_at, '%Y-%m-%d 00:00:00')"
+			} else {
+				timeTruncExpr = "DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00:00')"
+			}
+		} else {
+			timeTruncExpr = "recorded_at" // fallback
 		}
-	} else if resolution == "daily" {
-		// Group by day
-		query := `SELECT date_trunc('day', recorded_at) as timestamp, 
+
+		query := fmt.Sprintf(`SELECT %s as timestamp, 
 		                 avg(value) as value, 
 		                 avg(value) as avg_value, 
 		                 min(value) as min_value, 
@@ -129,7 +129,8 @@ func GetTelemetryHistory(c *fiber.Ctx) error {
 		          FROM telemetry 
 		          WHERE device_id = ? AND metric = ? AND recorded_at BETWEEN ? AND ? 
 		          GROUP BY timestamp 
-		          ORDER BY timestamp ASC`
+		          ORDER BY timestamp ASC`, timeTruncExpr)
+		
 		rows, err := config.AppConfig.DB.Raw(query, deviceID, metric, fromTime, toTime).Rows()
 		if err == nil {
 			defer rows.Close()
