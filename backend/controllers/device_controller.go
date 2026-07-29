@@ -178,6 +178,27 @@ func SendCommand(c *fiber.Ctx) error {
 		})
 	}
 
+	// Validate command structure based on Feature to prevent crashing edge devices
+	switch input.Feature {
+	case "switch":
+		if _, ok := input.Payload["switch_index"].(float64); !ok {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "switch_index required and must be a number"})
+		}
+		if _, ok := input.Payload["state"].(bool); !ok {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "state required and must be a boolean"})
+		}
+	case "gas_control":
+		if _, ok := input.Payload["motor_id"].(float64); !ok {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "motor_id required and must be a number"})
+		}
+		if _, ok := input.Payload["action"].(string); !ok {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "action required and must be a string"})
+		}
+		if _, ok := input.Payload["value"].(string); !ok {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": "value required and must be a string"})
+		}
+	}
+
 	// We declare a channel/hook or direct MQTT service publish.
 	// We'll write to topic: nt/v1/{deviceId}/cmd/{feature}
 	topic := fmt.Sprintf("nt/v1/%s/cmd/%s", deviceID, input.Feature)
@@ -226,12 +247,16 @@ func GetEnergyHistory(c *fiber.Ctx) error {
 	now := time.Now()
 	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	
-	monthConsumed := 0.0
-	for _, rec := range records {
-		if rec.Date.After(startOfMonth) || rec.Date.Equal(startOfMonth) {
-			monthConsumed += rec.UnitsConsumed
-		}
+	// Delegate monthly aggregation to Postgres for efficiency and accuracy
+	var result struct {
+		MonthConsumed float64
 	}
+	config.AppConfig.DB.Model(&models.DailyEnergyRecord{}).
+		Select("COALESCE(SUM(units_consumed), 0) as month_consumed").
+		Where("device_id = ? AND date >= ?", deviceID, startOfMonth).
+		Scan(&result)
+	
+	monthConsumed := result.MonthConsumed
 
 	var latestEnergy models.EnergyReading
 	err := config.AppConfig.DB.Where("device_id = ?", deviceID).Order("recorded_at desc").First(&latestEnergy).Error
