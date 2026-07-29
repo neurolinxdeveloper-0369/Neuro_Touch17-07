@@ -63,6 +63,11 @@ class MqttState {
             ?.toDouble() ??
         0.0;
   }
+
+  bool getSwitchState(String deviceId, int switchIndex) {
+    final val = getDeviceValue(deviceId, 'switch', 'sw$switchIndex');
+    return val == true || val == 1 || val == 'ON';
+  }
 }
 
 class MqttController extends StateNotifier<MqttState> {
@@ -192,7 +197,7 @@ class MqttController extends StateNotifier<MqttState> {
   }
 
   void _checkHeartbeats() {
-    final threshold = DateTime.now().subtract(const Duration(seconds: 60));
+    final threshold = DateTime.now().subtract(const Duration(seconds: 120));
     final newOnline = Map<String, bool>.from(state.onlineMap);
     bool changed = false;
 
@@ -217,6 +222,14 @@ class MqttController extends StateNotifier<MqttState> {
       MqttConstants.deviceCommand(deviceId, feature),
       payload,
     );
+  }
+
+  void requestDeviceStatus(String deviceId) {
+    if (!state.isDeviceOnline(deviceId)) return;
+    publishCommand(deviceId, 'state', {
+      'msg_id': 'app-req-status-${DateTime.now().millisecondsSinceEpoch}',
+      'action': 'status'
+    });
   }
 
   void publishSwitchCommand(String deviceId, int switchIndex, bool stateValue) {

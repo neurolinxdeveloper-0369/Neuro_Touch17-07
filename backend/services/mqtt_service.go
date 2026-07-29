@@ -296,8 +296,8 @@ func startHeartbeatTimeoutMonitor() {
 	db := config.AppConfig.DB
 
 	for range ticker.C {
-		// Mark devices as offline if they haven't sent a heartbeat in 60 seconds
-		threshold := time.Now().Add(-60 * time.Second)
+		// Mark devices as offline if they haven't sent a heartbeat in 120 seconds
+		threshold := time.Now().Add(-120 * time.Second)
 		db.Model(&models.Device{}).
 			Where("is_online = ? AND last_seen < ?", true, threshold).
 			Update("is_online", false)
