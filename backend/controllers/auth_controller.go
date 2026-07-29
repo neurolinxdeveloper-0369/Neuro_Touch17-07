@@ -1,10 +1,11 @@
 package controllers
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
+	"math/big"
 	"net/http"
 	"net/url"
 	"strings"
@@ -180,8 +181,16 @@ func SendOTP(c *fiber.Ctx) error {
 		})
 	}
 
-	// Generate 6-digit OTP code
-	otpCode := fmt.Sprintf("%06d", rand.Intn(1000000))
+	// Generate 6-digit OTP code securely
+	max := big.NewInt(1000000)
+	n, genErr := rand.Int(rand.Reader, max)
+	if genErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Failed to generate secure OTP",
+		})
+	}
+	otpCode := fmt.Sprintf("%06d", n.Int64())
 
 	// In GORM, upsert the verification code for this phone number
 	var verification models.OTPVerification
@@ -371,6 +380,3 @@ func RefreshToken(c *fiber.Ctx) error {
 	})
 }
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}

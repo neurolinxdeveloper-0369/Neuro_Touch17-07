@@ -3,8 +3,10 @@ package routes
 import (
 	"neurotouch/controllers"
 	"neurotouch/middleware"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
 func SetupRoutes(app *fiber.App) {
@@ -23,8 +25,21 @@ func SetupRoutes(app *fiber.App) {
 	// --- Public Auth Routes ---
 	auth := api.Group("/auth")
 	auth.Post("/google", controllers.GoogleAuth)
-	auth.Post("/otp/send", controllers.SendOTP)
-	auth.Post("/otp/verify", controllers.VerifyOTPLogin)
+
+	// Rate limiter for OTP endpoints
+	otpLimiter := limiter.New(limiter.Config{
+		Max:        5,
+		Expiration: 1 * time.Minute,
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"success": false,
+				"error":   "Too many requests, please try again later.",
+			})
+		},
+	})
+
+	auth.Post("/otp/send", otpLimiter, controllers.SendOTP)
+	auth.Post("/otp/verify", otpLimiter, controllers.VerifyOTPLogin)
 	auth.Post("/refresh-token", controllers.RefreshToken)
 
 	// --- Public Device Provisioning Callback (called by ESP12F hardware, no JWT) ---

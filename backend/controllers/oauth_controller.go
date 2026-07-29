@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -23,6 +24,13 @@ func generateRandomHex(n int) string {
 		return ""
 	}
 	return hex.EncodeToString(bytes)
+}
+
+// hashToken creates a SHA-256 hash of the token for secure storage
+func hashToken(token string) string {
+	hasher := sha256.New()
+	hasher.Write([]byte(token))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 // RenderAuthorizePage serves the HTML page for Alexa Account Linking
@@ -238,12 +246,14 @@ func AuthorizeSubmit(c *fiber.Ctx) error {
 
 	// Generate Authorization Code
 	authCode := generateRandomHex(32)
+	accessToken := generateRandomHex(32)
+	refreshToken := generateRandomHex(32)
 
 	oauthToken := models.OAuthToken{
 		UserID:            user.ID,
-		AuthorizationCode: authCode,
-		AccessToken:       generateRandomHex(32),
-		RefreshToken:      generateRandomHex(32),
+		AuthorizationCode: hashToken(authCode),
+		AccessToken:       hashToken(accessToken),
+		RefreshToken:      hashToken(refreshToken),
 		ExpiresAt:         time.Now().Add(10 * time.Minute),
 	}
 	
@@ -261,9 +271,11 @@ func Token(c *fiber.Ctx) error {
 
 	if grantType == "authorization_code" {
 		code := c.FormValue("code")
+		hashedCode := hashToken(code)
 		
 		var oauthToken models.OAuthToken
-		if err := config.AppConfig.DB.Where("authorization_code = ?", code).First(&oauthToken).Error; err != nil {
+		// Backwards compatibility for existing plaintext codes during transition
+		if err := config.AppConfig.DB.Where("authorization_code = ? OR authorization_code = ?", hashedCode, code).First(&oauthToken).Error; err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid_grant"})
 		}
 
@@ -272,35 +284,43 @@ func Token(c *fiber.Ctx) error {
 		}
 
 		// Generate Access and Refresh tokens
-		oauthToken.AccessToken = generateRandomHex(64)
-		oauthToken.RefreshToken = generateRandomHex(64)
+		newAccess := generateRandomHex(64)
+		newRefresh := generateRandomHex(64)
+		
+		oauthToken.AccessToken = hashToken(newAccess)
+		oauthToken.RefreshToken = hashToken(newRefresh)
 		oauthToken.AuthorizationCode = "" // Burn the code
 		oauthToken.ExpiresAt = time.Now().Add(30 * 24 * time.Hour) // 30 days
 		config.AppConfig.DB.Save(&oauthToken)
 
 		return c.JSON(fiber.Map{
-			"access_token":  oauthToken.AccessToken,
+			"access_token":  newAccess,
 			"token_type":    "Bearer",
 			"expires_in":    2592000, // 30 days in seconds
-			"refresh_token": oauthToken.RefreshToken,
+			"refresh_token": newRefresh,
 		})
 	} else if grantType == "refresh_token" {
 		refreshToken := c.FormValue("refresh_token")
+		hashedRefresh := hashToken(refreshToken)
 		
 		var oauthToken models.OAuthToken
-		if err := config.AppConfig.DB.Where("refresh_token = ?", refreshToken).First(&oauthToken).Error; err != nil {
+		// Backwards compatibility for existing plaintext refresh tokens
+		if err := config.AppConfig.DB.Where("refresh_token = ? OR refresh_token = ?", hashedRefresh, refreshToken).First(&oauthToken).Error; err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid_grant"})
 		}
 
 		// Rotate Access Token
-		oauthToken.AccessToken = generateRandomHex(64)
+		newAccess := generateRandomHex(64)
+		oauthToken.AccessToken = hashToken(newAccess)
+		// Upgrade refresh token to hash if it was plaintext
+		oauthToken.RefreshToken = hashedRefresh
 		config.AppConfig.DB.Save(&oauthToken)
 
 		return c.JSON(fiber.Map{
-			"access_token":  oauthToken.AccessToken,
+			"access_token":  newAccess,
 			"token_type":    "Bearer",
 			"expires_in":    2592000,
-			"refresh_token": oauthToken.RefreshToken, // Optional: return same or new refresh token
+			"refresh_token": refreshToken, // Return same refresh token
 		})
 	}
 
