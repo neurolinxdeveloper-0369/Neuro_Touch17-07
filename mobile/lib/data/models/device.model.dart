@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
@@ -243,6 +244,19 @@ class DeviceModel extends Equatable {
     this.roomId,
   });
 
+  static Map<String, dynamic> _parseConfigString(dynamic configData) {
+    if (configData is Map<String, dynamic>) {
+      return configData;
+    }
+    if (configData is String) {
+      try {
+        final decoded = jsonDecode(configData);
+        if (decoded is Map<String, dynamic>) return decoded;
+      } catch (_) {}
+    }
+    return <String, dynamic>{};
+  }
+
   factory DeviceModel.fromJson(Map<String, dynamic> json) => DeviceModel(
         id: json['id'] as String,
         homeId: json['home_id'] as String? ?? '',
@@ -257,9 +271,7 @@ class DeviceModel extends Equatable {
             ? DateTime.tryParse(json['last_seen'] as String)
             : null,
         switchCount: json['switch_count'] as int? ?? 0,
-        config: (json['config'] is Map<String, dynamic>)
-            ? (json['config'] as Map<String, dynamic>)
-            : {},
+        config: _parseConfigString(json['config']),
         switches: (json['switches'] as List<dynamic>? ?? [])
             .map((s) => SwitchConfigModel.fromJson(s as Map<String, dynamic>))
             .toList(),
