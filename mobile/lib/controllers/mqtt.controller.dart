@@ -259,25 +259,6 @@ class MqttController extends StateNotifier<MqttState> {
     });
 
     debugPrint('📱 [DEBUG] App requested Switch $switchIndex to ${stateValue ? "ON" : "OFF"}');
-
-    // HTTP Fallback (simulates MQTT for backend while firewall is blocked)
-    // Delayed by 300ms so MQTT flies out immediately without network contention
-    final apiPayload = {
-      'feature': 'state',
-      'payload': {
-        'msg_id': 'app-req-${DateTime.now().millisecondsSinceEpoch}',
-        'switches': {
-          switchIndex.toString(): stateValue
-        }
-      }
-    };
-    Future.delayed(const Duration(milliseconds: 300), () {
-      try {
-        ApiClient.instance.post('/devices/$deviceId/command', data: apiPayload);
-      } catch(e) {
-        debugPrint('HTTP error: $e');
-      }
-    });
   }
 
   void publishIrCommand(
@@ -344,18 +325,6 @@ class MqttController extends StateNotifier<MqttState> {
       'cmd/stove/$deviceId/control',
       payload,
     );
-    
-    // Also send via backend HTTP in case we're off-network and need proxying
-    Future.delayed(const Duration(milliseconds: 300), () {
-      try {
-        ApiClient.instance.post('/devices/$deviceId/command', data: {
-          'feature': 'gas_control',
-          'payload': payload,
-        });
-      } catch(e) {
-        debugPrint('HTTP error: $e');
-      }
-    });
   }
 
   @override
