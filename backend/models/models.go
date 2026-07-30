@@ -79,7 +79,7 @@ type Room struct {
 
 type Device struct {
 	ID             string         `gorm:"primaryKey;type:varchar(50)" json:"id"` // MAC address (AA:BB:CC:DD:EE:FF) or temp UUID
-	HomeID         string         `gorm:"type:uuid;not null" json:"home_id"`
+	HomeID         *string        `gorm:"type:uuid" json:"home_id"` // nullable — set after full provisioning
 	DeviceType     string         `gorm:"type:varchar(30);not null" json:"device_type"` // touch_panel | ir_blaster | lift_panel | energy_meter | temp_monitor | gas_control
 	Name           string         `gorm:"not null" json:"name"`
 	MACAddress     *string        `gorm:"type:varchar(17);uniqueIndex;column:mac_address" json:"mac_address"` // e.g. AA:BB:CC:DD:EE:FF

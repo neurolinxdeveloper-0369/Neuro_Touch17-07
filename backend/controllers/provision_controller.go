@@ -42,11 +42,10 @@ func MACConfirmEndpoint(c *fiber.Ctx) error {
 	session.IsConfirmed = true
 	config.AppConfig.DB.Save(&session)
 
-	// 3. Update existing device if it happens to exist
+	// 3. Upsert device — update if exists, create placeholder if not
 	var device models.Device
 	if err := config.AppConfig.DB.First(&device, "id = ? OR mac_address = ?", tempDeviceID, mac).Error; err == nil {
-		// Clear this MAC from any other device to prevent unique constraint violations
-		// when a user re-provisions the exact same hardware as a new device.
+		// Device already exists — clear any stale MAC collision then update
 		config.AppConfig.DB.Model(&models.Device{}).
 			Where("mac_address = ? AND id != ?", mac, device.ID).
 			Update("mac_address", nil)
@@ -56,6 +55,26 @@ func MACConfirmEndpoint(c *fiber.Ctx) error {
 			IsOnline:   true,
 			LastSeen:   &now,
 		})
+	} else {
+		// Device does NOT exist yet — create a placeholder row so the app
+		// can detect it online and then call ProvisionDeviceEndpoint to fill
+		// in home, name, device_type etc.
+		// Clear any stale record that may hold this MAC on a different ID.
+		config.AppConfig.DB.Model(&models.Device{}).
+			Where("mac_address = ?", mac).
+			Update("mac_address", nil)
+
+		placeholder := models.Device{
+			ID:             tempDeviceID,
+			HomeID:         "",           // Will be set by ProvisionDeviceEndpoint
+			DeviceType:     "energy_meter",
+			Name:           "Unprovisioned Device",
+			MACAddress:     &mac,
+			IsOnline:       true,
+			LastSeen:       &now,
+			AssignmentType: "room",
+		}
+		config.AppConfig.DB.Create(&placeholder)
 	}
 
 	return c.JSON(fiber.Map{
@@ -364,10 +383,11 @@ func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 	err := query.First(&device).Error
 
 	if err != nil {
-		// Create new device entry
+			// Create new device entry
+		homeID := input.HomeID
 		device = models.Device{
 			ID:             finalDeviceID,
-			HomeID:         input.HomeID,
+			HomeID:         &homeID,
 			DeviceType:     input.DeviceType,
 			Name:           input.Name,
 			SSIDPattern:    &input.SSIDPattern,
@@ -388,7 +408,8 @@ func ProvisionDeviceEndpoint(c *fiber.Ctx) error {
 		}
 	} else {
 		// Re-assign existing device
-		device.HomeID = input.HomeID
+		homeID2 := input.HomeID
+		device.HomeID = &homeID2
 		device.Name = input.Name
 		device.DeviceType = input.DeviceType
 		device.SwitchCount = input.SwitchCount

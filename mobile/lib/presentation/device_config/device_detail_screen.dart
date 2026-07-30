@@ -67,7 +67,7 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
                 onToggle: (idx, state) => ref.read(mqttControllerProvider.notifier).publishSwitchCommand(widget.deviceId, idx, state),
               ),
             if (device.deviceType == DeviceType.energyMeter) 
-              _EnergyPanel(device: device, mqttState: mqttState),
+              _EnergyPanel(device: device, mqttState: mqttState, isOnline: isOnline),
             if (device.deviceType == DeviceType.tempMonitor) _TempPanel(device: device, mqttState: mqttState),
             if (device.deviceType == DeviceType.gasControl) _GasControlPanel(deviceId: widget.deviceId, mqttState: mqttState),
             const SizedBox(height: 100),
@@ -200,7 +200,8 @@ class _SwitchPanel extends ConsumerWidget {
 class _EnergyPanel extends StatefulWidget {
   final DeviceModel device;
   final MqttState mqttState;
-  const _EnergyPanel({required this.device, required this.mqttState});
+  final bool isOnline;
+  const _EnergyPanel({required this.device, required this.mqttState, required this.isOnline});
 
   @override
   State<_EnergyPanel> createState() => _EnergyPanelState();
@@ -228,6 +229,17 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
     );
     
     _loadHistory();
+  }
+
+  @override
+  void didUpdateWidget(_EnergyPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Pause pulse animation when offline, resume when online
+    if (!widget.isOnline && _pulseController.isAnimating) {
+      _pulseController.stop();
+    } else if (widget.isOnline && !_pulseController.isAnimating) {
+      _pulseController.repeat(reverse: true);
+    }
   }
   
   Future<void> _loadHistory() async {
@@ -291,16 +303,57 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
     }
     
     final isDark = context.isDark;
+    final isOnline = widget.isOnline;
 
-    // Calculate a dynamic color based on total power usage (green -> yellow -> red)
-    Color powerColor = AppColors.success;
-    if (totalPower > 5000) powerColor = AppColors.error;
-    else if (totalPower > 2000) powerColor = Colors.orangeAccent;
+    // ── Offline mode: zero everything and use grey palette ──────────────────
+    final double effectiveV1    = isOnline ? v1 : 0.0;
+    final double effectiveA1    = isOnline ? a1 : 0.0;
+    final double effectiveW1    = isOnline ? w1 : 0.0;
+    final double effectivePf1   = isOnline ? pf1 : 0.0;
+    final double effectiveV2    = isOnline ? v2 : 0.0;
+    final double effectiveA2    = isOnline ? a2 : 0.0;
+    final double effectiveW2    = isOnline ? w2 : 0.0;
+    final double effectivePf2   = isOnline ? pf2 : 0.0;
+    final double effectiveV3    = isOnline ? v3 : 0.0;
+    final double effectiveA3    = isOnline ? a3 : 0.0;
+    final double effectiveW3    = isOnline ? w3 : 0.0;
+    final double effectivePf3   = isOnline ? pf3 : 0.0;
+    final double effectiveTotal = isOnline ? totalPower : 0.0;
+    final double effectiveEnergy= isOnline ? totalEnergy : 0.0;
+    final bool   effective3Ph   = isOnline && is3Phase;
+    final double effectiveVDisp = isOnline ? calculatedVoltage : 0.0;
+
+    // Colour for gauge: grey when offline
+    Color powerColor = isOnline ? AppColors.success : Colors.grey.shade600;
+    if (isOnline) {
+      if (totalPower > 5000) powerColor = AppColors.error;
+      else if (totalPower > 2000) powerColor = Colors.orangeAccent;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppSectionHeader(title: is3Phase ? '3-Phase Energy Analytics' : 'Live Energy Analytics', padding: const EdgeInsets.only(bottom: 16)),
+        AppSectionHeader(title: effective3Ph ? '3-Phase Energy Analytics' : 'Live Energy Analytics', padding: const EdgeInsets.only(bottom: 16)),
+        // ── Offline banner ──────────────────────────────────────────────────
+        if (!isOnline)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade800.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade600),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.wifi_off_rounded, color: Colors.grey.shade400, size: 18),
+                const SizedBox(width: 10),
+                Text('Device Offline — Values will resume when reconnected',
+                    style: AppTypography.bodySmall.copyWith(color: Colors.grey.shade400)),
+              ],
+            ),
+          ),
         GlassPanel(
           padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
           child: Column(
@@ -361,11 +414,11 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
                         Icon(Icons.bolt_rounded, color: powerColor, size: 36),
                         const SizedBox(height: 4),
                         Text(
-                          totalPower.toStringAsFixed(1),
+                          effectiveTotal.toStringAsFixed(1),
                           style: AppTypography.h2.copyWith(color: powerColor, fontSize: 28),
                         ),
                         Text(
-                          'Total Watts',
+                          isOnline ? 'Total Watts' : 'Offline',
                           style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(isDark)),
                         ),
                       ],
@@ -379,17 +432,17 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
               Row(
                 children: [
                   _MetricTile(
-                    label: is3Phase ? '3-Phase Voltage (L-L)' : 'Voltage', 
-                    value: '${calculatedVoltage.toStringAsFixed(1)} V', 
+                    label: effective3Ph ? '3-Phase Voltage (L-L)' : 'Voltage', 
+                    value: '${effectiveVDisp.toStringAsFixed(1)} V', 
                     icon: Icons.electric_meter_rounded,
-                    color: Colors.blueAccent,
+                    color: isOnline ? Colors.blueAccent : Colors.grey.shade600,
                   ),
                   const SizedBox(width: 12),
                   _MetricTile(
-                    label: is3Phase ? 'Avg Current' : 'Current', 
-                    value: '${(is3Phase ? ((a1 + a2 + a3) / 3) : a1).toStringAsFixed(2)} A', 
+                    label: effective3Ph ? 'Avg Current' : 'Current', 
+                    value: '${(effective3Ph ? ((effectiveA1 + effectiveA2 + effectiveA3) / 3) : effectiveA1).toStringAsFixed(2)} A', 
                     icon: Icons.waves_rounded,
-                    color: Colors.deepPurpleAccent,
+                    color: isOnline ? Colors.deepPurpleAccent : Colors.grey.shade600,
                   ),
                 ],
               ),
@@ -398,33 +451,35 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
                 children: [
                   _MetricTile(
                     label: 'Total Consumed', 
-                    value: '${totalEnergy.toStringAsFixed(2)} kWh', 
+                    value: '${effectiveEnergy.toStringAsFixed(2)} kWh', 
                     icon: Icons.eco_rounded,
-                    color: AppColors.success,
+                    color: isOnline ? AppColors.success : Colors.grey.shade600,
                   ),
                   const SizedBox(width: 12),
                   _MetricTile(
-                    label: is3Phase ? 'Avg Power Factor' : 'Power Factor', 
-                    value: is3Phase ? ((pf1 + pf2 + pf3) / 3).toStringAsFixed(2) : pf1.toStringAsFixed(2), 
+                    label: effective3Ph ? 'Avg Power Factor' : 'Power Factor', 
+                    value: effective3Ph 
+                        ? ((effectivePf1 + effectivePf2 + effectivePf3) / 3).toStringAsFixed(2) 
+                        : effectivePf1.toStringAsFixed(2), 
                     icon: Icons.speed_rounded,
-                    color: Colors.orangeAccent,
+                    color: isOnline ? Colors.orangeAccent : Colors.grey.shade600,
                   ),
                 ],
               ),
               const SizedBox(height: 24),
               
               // Phase Breakdown
-              if (is3Phase) ...[
+              if (effective3Ph) ...[
                 Align(
                   alignment: Alignment.centerLeft, 
                   child: Text('Phase Breakdown', style: AppTypography.titleMedium)
                 ),
                 const SizedBox(height: 12),
-                _PhaseRow(phaseName: 'Phase 1 (R)', v: v1, a: a1, w: w1, pf: pf1, color: Colors.redAccent),
+                _PhaseRow(phaseName: 'Phase 1 (R)', v: effectiveV1, a: effectiveA1, w: effectiveW1, pf: effectivePf1, color: isOnline ? Colors.redAccent   : Colors.grey.shade600),
                 const SizedBox(height: 8),
-                _PhaseRow(phaseName: 'Phase 2 (Y)', v: v2, a: a2, w: w2, pf: pf2, color: Colors.amber),
+                _PhaseRow(phaseName: 'Phase 2 (Y)', v: effectiveV2, a: effectiveA2, w: effectiveW2, pf: effectivePf2, color: isOnline ? Colors.amber        : Colors.grey.shade600),
                 const SizedBox(height: 8),
-                _PhaseRow(phaseName: 'Phase 3 (B)', v: v3, a: a3, w: w3, pf: pf3, color: Colors.blueAccent),
+                _PhaseRow(phaseName: 'Phase 3 (B)', v: effectiveV3, a: effectiveA3, w: effectiveW3, pf: effectivePf3, color: isOnline ? Colors.blueAccent   : Colors.grey.shade600),
               ],
             ],
           ),

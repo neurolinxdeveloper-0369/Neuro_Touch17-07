@@ -309,7 +309,8 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 									if err != nil { // No recent alert found
 										// Create notification for Home Owner
 										var home models.Home
-										if err := db.Where("id = ?", device.HomeID).First(&home).Error; err == nil {
+										if device.HomeID != nil {
+										if err := db.Where("id = ?", *device.HomeID).First(&home).Error; err == nil {
 											db.Create(&models.Notification{
 												UserID:   home.OwnerID,
 												Title:    "Temperature Alert",
