@@ -64,7 +64,6 @@ class NotificationService {
     bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
     if (!isAllowed) {
       await AwesomeNotifications().requestPermissionToSendNotifications(
-        channelList: [alarmChannelKey],
         permissions: [
           NotificationPermission.Alert,
           NotificationPermission.Sound,
