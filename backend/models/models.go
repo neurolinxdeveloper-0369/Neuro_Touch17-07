@@ -181,7 +181,7 @@ type DailyEnergyRecord struct {
 
 type EnergyReading struct {
 	ID          uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
-	DeviceID    string    `gorm:"type:varchar(50);not null;index" json:"device_id"`
+	DeviceID    string    `gorm:"type:varchar(50);not null;uniqueIndex" json:"device_id"`
 	
 	// Phase R / Single Phase
 	VoltageR    float64   `gorm:"type:real;default:0;column:voltage_1" json:"voltage_r"`

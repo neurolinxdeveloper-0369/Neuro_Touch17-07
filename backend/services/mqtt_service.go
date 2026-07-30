@@ -13,6 +13,8 @@ import (
 	"neurotouch/models"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var MqttClient mqtt.Client
@@ -290,7 +292,10 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 					if energy.TotalPower == 0  && energy.PowerR > 0  { energy.TotalPower  = energy.PowerR }
 					if energy.TotalEnergy == 0 && energy.EnergyR > 0 { energy.TotalEnergy = energy.EnergyR }
 
-					db.Create(&energy)
+					db.Clauses(clause.OnConflict{
+						Columns:   []clause.Column{{Name: "device_id"}},
+						UpdateAll: true,
+					}).Create(&energy)
 				} else {
 					// ----------------------------------------------------
 					// TEMP MONITOR THRESHOLD ALERTS LOGIC

@@ -263,17 +263,15 @@ func GetEnergyHistory(c *fiber.Ctx) error {
 
 	todayConsumed := 0.0
 	if err == nil {
-		// Calculate today's consumption live:
-		// today_consumed = latest reading - first reading of today
-		// This works even before the 23:59 CRON runs.
-		startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-		var firstEnergyToday models.EnergyReading
-		errFirst := config.AppConfig.DB.
-			Where("device_id = ? AND recorded_at >= ?", deviceID, startOfDay).
-			Order("recorded_at asc").First(&firstEnergyToday).Error
+		var lastDaily models.DailyEnergyRecord
+		// Get the most recent daily record (from yesterday, since today hasn't finished)
+		errDaily := config.AppConfig.DB.
+			Where("device_id = ?", deviceID).
+			Order("date desc").
+			First(&lastDaily).Error
 
-		if errFirst == nil {
-			todayConsumed = latestEnergy.TotalEnergy - firstEnergyToday.TotalEnergy
+		if errDaily == nil {
+			todayConsumed = latestEnergy.TotalEnergy - lastDaily.EndEnergy
 			if todayConsumed < 0 {
 				todayConsumed = 0 // Guard against counter reset
 			}
