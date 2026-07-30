@@ -41,7 +41,7 @@
 #define BACKEND_HOST           "http://129.121.120.144:8080"
 #define BACKEND_PROVISION_PATH "/api/v1/provision/mac-confirm"
 #define MQTT_SERVER "129.121.120.144" // Replace with your actual MQTT broker IP
-#define MQTT_PORT 1883
+#define MQTT_PORT 8086
 #define MQTT_USER "admin"
 #define MQTT_PASS "Neurolinx@123"
 
