@@ -1,6 +1,6 @@
 module neurotouch
 
-go 1.25.0
+go 1.22
 
 require (
 	firebase.google.com/go/v4 v4.21.0
