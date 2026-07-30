@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.example.neuro_touch"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = "30.0.15729638"
 
     compileOptions {
