@@ -45,6 +45,12 @@ func MACConfirmEndpoint(c *fiber.Ctx) error {
 	// 3. Update existing device if it happens to exist
 	var device models.Device
 	if err := config.AppConfig.DB.First(&device, "id = ? OR mac_address = ?", tempDeviceID, mac).Error; err == nil {
+		// Clear this MAC from any other device to prevent unique constraint violations
+		// when a user re-provisions the exact same hardware as a new device.
+		config.AppConfig.DB.Model(&models.Device{}).
+			Where("mac_address = ? AND id != ?", mac, device.ID).
+			Update("mac_address", nil)
+
 		config.AppConfig.DB.Model(&device).Updates(models.Device{
 			MACAddress: &mac,
 			IsOnline:   true,
