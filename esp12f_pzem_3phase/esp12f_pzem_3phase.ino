@@ -57,7 +57,7 @@
 #define BACKEND_HOST           "http://129.121.120.144:8080"
 #define BACKEND_PROVISION_PATH "/api/v1/provision/mac-confirm"
 #define MQTT_SERVER            "129.121.120.144"
-#define MQTT_PORT              8086
+#define MQTT_PORT              1883
 #define MQTT_USER              "admin"
 #define MQTT_PASS              "Neurolinx@123"
 
@@ -65,8 +65,8 @@
 #define LED_PIN    2    // Blue LED (active LOW on ESP12F)
 
 // Shared 2-wire Modbus bus for all 3 PZEMs
-#define PZEM_RX_PIN 14  // D5 — connect to all 3 PZEM TX lines
-#define PZEM_TX_PIN 12  // D6 — connect to all 3 PZEM RX lines
+#define PZEM_RX_PIN   12      // D6 / GPIO12
+#define PZEM_TX_PIN   14      // D5 / GPIO14
 
 // Modbus addresses (pre-programmed per phase)
 #define ADDR_R  0x01
@@ -92,7 +92,8 @@ WiFiClient       wifiClient;
 PubSubClient     mqttClient(wifiClient);
 
 // Single SoftwareSerial bus shared by all 3 PZEMs
-SoftwareSerial   pzemSerial(PZEM_RX_PIN, PZEM_TX_PIN);
+SoftwareSerial pzemSerial(PZEM_RX_PIN, PZEM_TX_PIN);
+PZEM004Tv30 pzem(pzemSerial);
 
 // Three PZEM instances on the shared bus — each with its own Modbus address
 PZEM004Tv30 pzemR(&pzemSerial, ADDR_R);   // Phase R (Red)
@@ -330,7 +331,7 @@ void publishPowerData() {
     String payload;
     serializeJson(doc, payload);
     mqttClient.publish(topic.c_str(), payload.c_str());
-    Serial.println("[MQTT] Published 3-phase telemetry");
+    Serial.println("[MQTT] Published 3-phase telemetry: " + payload);
 }
 
 // ─── WiFi Connection ─────────────────────────────────────────────────────────
@@ -357,6 +358,7 @@ void setup() {
     digitalWrite(LED_PIN, HIGH); // OFF initially
 
     pzemSerial.begin(9600);
+        delay(100);
 
     Serial.println("\n[BOOT] Neuro 3-Phase Power Meter v1.1.0");
 
