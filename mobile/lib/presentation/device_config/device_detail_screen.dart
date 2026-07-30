@@ -440,7 +440,7 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
                   const SizedBox(width: 12),
                   _MetricTile(
                     label: effective3Ph ? 'Avg Current' : 'Current', 
-                    value: '${(effective3Ph ? ((effectiveA1 + effectiveA2 + effectiveA3) / 3) : effectiveA1).toStringAsFixed(2)} A', 
+                    value: '${(effective3Ph ? ((effectiveA1 + effectiveA2 + effectiveA3) / 3) : effectiveA1).toStringAsFixed(4)} A', 
                     icon: Icons.waves_rounded,
                     color: isOnline ? Colors.deepPurpleAccent : Colors.grey.shade600,
                   ),
@@ -451,7 +451,7 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
                 children: [
                   _MetricTile(
                     label: 'Total Consumed', 
-                    value: '${effectiveEnergy.toStringAsFixed(2)} kWh', 
+                    value: '${effectiveEnergy.toStringAsFixed(4)} kWh', 
                     icon: Icons.eco_rounded,
                     color: isOnline ? AppColors.success : Colors.grey.shade600,
                   ),
@@ -491,14 +491,14 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
           children: [
             _MetricTile(
               label: 'Today (kWh)', 
-              value: _todayConsumed.toStringAsFixed(2), 
+              value: _todayConsumed.toStringAsFixed(4), 
               icon: Icons.today_rounded,
               color: Colors.green,
             ),
             const SizedBox(width: 12),
             _MetricTile(
               label: 'This Month (kWh)', 
-              value: _monthConsumed.toStringAsFixed(2), 
+              value: _monthConsumed.toStringAsFixed(4), 
               icon: Icons.calendar_month_rounded,
               color: Colors.teal,
             ),
@@ -666,7 +666,7 @@ class _PhaseRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text('${v.toStringAsFixed(1)} V', style: AppTypography.bodySmall),
-                Text('${a.toStringAsFixed(2)} A', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(isDark))),
+                Text('${a.toStringAsFixed(4)} A', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(isDark))),
               ],
             ),
           ),
