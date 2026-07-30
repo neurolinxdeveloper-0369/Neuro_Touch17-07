@@ -312,7 +312,7 @@ func Token(c *fiber.Ctx) error {
 		
 		oauthToken.AccessToken = hashToken(newAccess)
 		oauthToken.RefreshToken = hashToken(newRefresh)
-		oauthToken.AuthorizationCode = "" // Burn the code
+		oauthToken.AuthorizationCode = "used_" + generateRandomHex(16) // Burn the code uniquely
 		oauthToken.ExpiresAt = time.Now().Add(30 * 24 * time.Hour) // 30 days
 		config.AppConfig.DB.Save(&oauthToken)
 
