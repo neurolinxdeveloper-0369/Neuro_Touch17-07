@@ -267,6 +267,78 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 					
 					db.Create(&energy)
 				} else {
+					// ----------------------------------------------------
+					// TEMP MONITOR THRESHOLD ALERTS LOGIC
+					// ----------------------------------------------------
+					if tempVal, ok := data["temperature"]; ok {
+						tempFloat, _ := strconv.ParseFloat(fmt.Sprintf("%v", tempVal), 64)
+
+						var device models.Device
+						if err := db.Where("id = ?", deviceID).First(&device).Error; err == nil {
+							var cfg map[string]interface{}
+							if device.Config != "" {
+								json.Unmarshal([]byte(device.Config), &cfg)
+								
+								// Alert threshold processing
+								sendAlert := false
+								alertMessage := ""
+
+								if maxTempRaw, exists := cfg["max_temp"]; exists {
+									maxTemp, _ := strconv.ParseFloat(fmt.Sprintf("%v", maxTempRaw), 64)
+									if tempFloat >= maxTemp {
+										sendAlert = true
+										alertMessage = fmt.Sprintf("Temperature %.1f exceeded MAX threshold of %.1f!", tempFloat, maxTemp)
+									}
+								}
+
+								if !sendAlert { // only send one alert at a time
+									if minTempRaw, exists := cfg["min_temp"]; exists {
+										minTemp, _ := strconv.ParseFloat(fmt.Sprintf("%v", minTempRaw), 64)
+										if tempFloat <= minTemp {
+											sendAlert = true
+											alertMessage = fmt.Sprintf("Temperature %.1f dropped below MIN threshold of %.1f!", tempFloat, minTemp)
+										}
+									}
+								}
+
+								if sendAlert {
+									// Simple debouncing: Check if we already alerted in the last 15 minutes
+									var lastAlert models.Notification
+									err := db.Where("device_id = ? AND title = ? AND created_at > ?", device.ID, "Temperature Alert", time.Now().Add(-15*time.Minute)).Order("created_at desc").First(&lastAlert).Error
+									
+									if err != nil { // No recent alert found
+										// Create notification for Home Owner
+										var home models.Home
+										if err := db.Where("id = ?", device.HomeID).First(&home).Error; err == nil {
+											db.Create(&models.Notification{
+												UserID:   home.OwnerID,
+												Title:    "Temperature Alert",
+												Body:     fmt.Sprintf("%s: %s", device.Name, alertMessage),
+												DeviceID: &device.ID,
+											})
+
+											// TRIGGER FCM FULL-SCREEN ALARM
+											var owner models.User
+											if err := db.Where("id = ?", home.OwnerID).First(&owner).Error; err == nil {
+												if owner.FCMToken != nil && *owner.FCMToken != "" {
+													roomName := "Unknown Room"
+													if device.RoomID != nil {
+														// Optional: We can lookup the room name, or just pass assignment type
+														roomName = device.AssignmentType
+													} else {
+														roomName = device.AssignmentType
+													}
+													go SendCriticalAlarm(*owner.FCMToken, device.ID, roomName, tempFloat)
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					// ----------------------------------------------------
+
 					// Optional: Insert specific telemetry metrics into telemetries table
 					for k, v := range data {
 						if k != "fw_version" && k != "uptime_sec" && k != "timestamp" {

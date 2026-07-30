@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/storage_service.dart';
@@ -220,6 +222,15 @@ class ApiService {
     }
     if (data is String && data.isNotEmpty) return data;
     return null;
+  }
+
+  // --- Push Notifications ---
+  Future<void> updateFCMToken(String token) async {
+    try {
+      await _dio.post('/auth/fcm', data: {'fcm_token': token});
+    } catch (e) {
+      debugPrint('Failed to sync FCM token: $e');
+    }
   }
 
   void dispose() {

@@ -20,6 +20,11 @@ func main() {
 	// 1. Load Configurations & Database connection
 	config.LoadConfig()
 
+	// Initialize Firebase Admin SDK (Non-fatal if key is missing during dev)
+	if err := services.InitFirebase(); err != nil {
+		log.Printf("Warning: Firebase initialization failed: %v", err)
+	}
+
 	// 2. Automigrate Database Schema
 	log.Println("Migrating database schemas...")
 	err := config.AppConfig.DB.AutoMigrate(

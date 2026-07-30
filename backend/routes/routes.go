@@ -48,6 +48,9 @@ func SetupRoutes(app *fiber.App) {
 	// --- Protected Routes ---
 	protected := api.Group("", middleware.AuthRequired)
 
+	// User/Auth specific updates
+	protected.Post("/auth/fcm", controllers.UpdateFCMToken)
+
 	// Homes Management
 	protected.Get("/homes", controllers.GetHomes)
 	protected.Post("/homes", controllers.CreateHome)

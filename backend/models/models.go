@@ -10,6 +10,7 @@ type User struct {
 	Email        *string   `gorm:"type:varchar(255)" json:"email"`
 	Phone        *string   `gorm:"type:varchar(20)" json:"phone"`
 	ProfilePic   *string   `gorm:"type:text;column:profile_pic" json:"profile_pic"`
+	FCMToken     *string   `gorm:"type:text;column:fcm_token" json:"fcm_token"`
 	AuthProvider string    `gorm:"type:varchar(20);not null;column:auth_provider" json:"auth_provider"`
 	CreatedAt    time.Time `gorm:"type:timestamptz;not null;default:CURRENT_TIMESTAMP" json:"created_at"`
 	Homes        []Home    `gorm:"many2many:home_members;joinForeignKey:UserID;joinReferences:HomeID" json:"-"`

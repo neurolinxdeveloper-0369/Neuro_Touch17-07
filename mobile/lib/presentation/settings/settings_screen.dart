@@ -48,6 +48,17 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             _SettingsSection(
+              title: 'Integrations',
+              children: [
+                _SettingsTile(
+                  icon: Icons.speaker_group_outlined,
+                  label: 'Connect Amazon Alexa',
+                  onTap: () => _showAlexaDialog(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _SettingsSection(
               title: 'Support',
               children: [
                 _SettingsTile(icon: Icons.privacy_tip_outlined, label: 'Privacy Policy', onTap: () => context.push('/legal?type=privacy')),
@@ -96,6 +107,38 @@ class SettingsScreen extends ConsumerWidget {
               });
             },
             child: const Text('Sign Out', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAlexaDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Connect with Amazon Alexa'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Neuro Touch is currently in Developer Mode. To link your account:'),
+            SizedBox(height: 12),
+            Text('1. Open the Amazon Alexa app on your phone.'),
+            SizedBox(height: 8),
+            Text('2. Go to More > Skills & Games.'),
+            SizedBox(height: 8),
+            Text('3. Scroll to the bottom and tap "Your Skills".'),
+            SizedBox(height: 8),
+            Text('4. Tap the "Dev" tab.'),
+            SizedBox(height: 8),
+            Text('5. Tap "Neuro Touch" and click "Enable to Use".'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Got it!'),
           ),
         ],
       ),

@@ -11,6 +11,7 @@ import '../../presentation/home_setup/create_home_screen.dart';
 import '../../presentation/shell/main_shell.dart';
 import '../../presentation/dashboard/dashboard_screen.dart';
 import '../../presentation/device_config/device_config_screen.dart';
+import '../../presentation/device_config/alarm_screen.dart';
 import '../../presentation/device_config/device_detail_screen.dart';
 import '../../presentation/add_device/add_device_screen.dart';
 import '../../presentation/add_device/provisioning/soft_ap_flow.dart';
@@ -61,7 +62,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isPublicRoute = location == '/login' ||
                            location == '/otp-verify' ||
                            location == '/legal' ||
-                           location == '/webview';
+                           location == '/webview' ||
+                           location == '/alarm';
       final isCreateHome = location == '/create-home';
 
       // 1. Wait for Auth Initialization (splash stays until 5s boot + check done)
@@ -93,6 +95,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+
+      // Alarm Route
+      GoRoute(
+        path: '/alarm',
+        builder: (context, state) {
+          final payload = state.extra as Map<String, String?>? ?? {};
+          return AlarmScreen(payload: payload);
+        },
       ),
 
       // Auth Routes
@@ -163,8 +174,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Main Shell with bottom nav
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            MainShell(navigationShell: navigationShell),
+        builder: (context, state, navigationShell) {
+          return MainShell(navigationShell: navigationShell);
+        },
         branches: [
           // Tab 0: Dashboard
           StatefulShellBranch(

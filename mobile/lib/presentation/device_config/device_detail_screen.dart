@@ -1,3 +1,5 @@
+import '../../data/services/api_service.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'switch_settings_screen.dart';
 import 'package:collection/collection.dart';
@@ -66,7 +68,7 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
               ),
             if (device.deviceType == DeviceType.energyMeter) 
               _EnergyPanel(device: device, mqttState: mqttState),
-            if (device.deviceType == DeviceType.tempMonitor) _TempPanel(deviceId: widget.deviceId, mqttState: mqttState),
+            if (device.deviceType == DeviceType.tempMonitor) _TempPanel(device: device, mqttState: mqttState),
             if (device.deviceType == DeviceType.gasControl) _GasControlPanel(deviceId: widget.deviceId, mqttState: mqttState),
             const SizedBox(height: 100),
           ],
@@ -619,20 +621,72 @@ class _PhaseRow extends StatelessWidget {
   }
 }
 
-class _TempPanel extends StatelessWidget {
-  final String deviceId;
+class _TempPanel extends ConsumerStatefulWidget {
+  final DeviceModel device;
   final MqttState mqttState;
-  const _TempPanel({required this.deviceId, required this.mqttState});
+  const _TempPanel({required this.device, required this.mqttState});
+
+  @override
+  ConsumerState<_TempPanel> createState() => _TempPanelState();
+}
+
+class _TempPanelState extends ConsumerState<_TempPanel> {
+  double _minTemp = 20.0;
+  double _maxTemp = 40.0;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConfig();
+  }
+
+  void _loadConfig() {
+    try {
+      final cfg = widget.device.config;
+      setState(() {
+        _minTemp = (cfg['min_temp'] as num?)?.toDouble() ?? 20.0;
+        _maxTemp = (cfg['max_temp'] as num?)?.toDouble() ?? 40.0;
+      });
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }
+
+  Future<void> _saveConfig() async {
+    setState(() => _isLoading = true);
+    try {
+      final newConfig = Map<String, dynamic>.from(widget.device.config);
+      newConfig['min_temp'] = _minTemp;
+      newConfig['max_temp'] = _maxTemp;
+
+      final api = ref.read(apiServiceProvider);
+      await api.put('/api/v1/devices/${widget.device.id}', {
+        'config': jsonEncode(newConfig),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Thresholds saved!')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save thresholds: $e'), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final temp = (mqttState.getDeviceValue(deviceId, 'telemetry', 'temperature') as num?)?.toDouble() ?? 0.0;
-    final fan1Current = (mqttState.getDeviceValue(deviceId, 'telemetry', 'fan1_current') as num?)?.toDouble() ?? 0.0;
-    final fan2Current = (mqttState.getDeviceValue(deviceId, 'telemetry', 'fan2_current') as num?)?.toDouble() ?? 0.0;
+    final temp = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'temperature') as num?)?.toDouble() ?? 0.0;
+    final fan1Current = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'fan1_current') as num?)?.toDouble() ?? 0.0;
+    final fan2Current = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'fan2_current') as num?)?.toDouble() ?? 0.0;
     
     // We do NOT show raw current. Any current > 0.05A means the Fan is ON.
     bool fan1On = fan1Current > 0.05;
     bool fan2On = fan2Current > 0.05;
+    final isDark = context.isDark;
 
     return Column(
       children: [
@@ -659,6 +713,60 @@ class _TempPanel extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(child: _FanStatusCard(label: 'Fan 2', isOn: fan2On)),
           ],
+        ),
+        const SizedBox(height: 32),
+        AppSectionHeader(title: 'Alert Thresholds', padding: const EdgeInsets.only(bottom: 16)),
+        GlassPanel(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Min: ${_minTemp.toInt()}°C', style: AppTypography.bodyMedium.copyWith(color: isDark ? Colors.white70 : Colors.black87)),
+                  Expanded(
+                    child: Slider(
+                      value: _minTemp,
+                      min: 0,
+                      max: 50,
+                      activeColor: Colors.blueAccent,
+                      onChanged: (val) => setState(() => _minTemp = val),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Max: ${_maxTemp.toInt()}°C', style: AppTypography.bodyMedium.copyWith(color: isDark ? Colors.white70 : Colors.black87)),
+                  Expanded(
+                    child: Slider(
+                      value: _maxTemp,
+                      min: 30,
+                      max: 200,
+                      activeColor: Colors.deepOrangeAccent,
+                      onChanged: (val) => setState(() => _maxTemp = val),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _saveConfig,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _isLoading 
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                    : const Text('Save Thresholds', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

@@ -243,6 +243,7 @@ class CircularSwitchGrid extends StatelessWidget {
   final Function(int index)? onLongPress;
 
   final bool isCustomLayout;
+  final bool isOnline;
 
   const CircularSwitchGrid({
     super.key,
@@ -253,6 +254,7 @@ class CircularSwitchGrid extends StatelessWidget {
     required this.onToggle,
     this.onLongPress,
     this.isCustomLayout = false,
+    this.isOnline = true,
   });
 
   Widget _buildSwitchItem(int switchIndex) {
@@ -278,6 +280,8 @@ class CircularSwitchGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Widget content;
+    
     if (isCustomLayout && (switchCount == 6 || switchCount == 7 || switchCount == 8)) {
       List<Widget> rows = [];
       if (switchCount == 8) {
@@ -287,26 +291,37 @@ class CircularSwitchGrid extends StatelessWidget {
       } else if (switchCount == 6) {
         rows = [_buildRow([1]), _buildRow([2]), _buildRow([3, 4]), _buildRow([5, 6])];
       }
-      return Column(
+      content = Column(
         children: rows.map((r) => Padding(padding: const EdgeInsets.only(bottom: 20), child: r)).toList(),
+      );
+    } else {
+      final crossAxisCount = switchCount <= 6 ? 3 : 4;
+
+      content = GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          mainAxisSpacing: 20,
+          crossAxisSpacing: 16,
+          childAspectRatio: 0.85,
+        ),
+        itemCount: switchCount,
+        itemBuilder: (context, index) {
+          return _buildSwitchItem(index + 1);
+        },
       );
     }
 
-    final crossAxisCount = switchCount <= 6 ? 3 : 4;
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        mainAxisSpacing: 20,
-        crossAxisSpacing: 16,
-        childAspectRatio: 0.85,
-      ),
-      itemCount: switchCount,
-      itemBuilder: (context, index) {
-        return _buildSwitchItem(index + 1);
-      },
-    );
+    if (!isOnline) {
+      return Opacity(
+        opacity: 0.4,
+        child: IgnorePointer(
+          child: content,
+        ),
+      );
+    }
+    
+    return content;
   }
 }

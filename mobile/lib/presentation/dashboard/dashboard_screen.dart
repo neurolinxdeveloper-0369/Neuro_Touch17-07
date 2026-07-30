@@ -11,6 +11,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/utils/extensions.dart';
 import '../common/widgets/glass_panel.dart';
 import '../common/widgets/app_section_header.dart';
+import 'widgets/dashboard_extensions.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -66,20 +67,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           slivers: [
             _DashboardAppBar(user: user),
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 0), // Adjust padding for full width sections
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
+                  const ScenesSection(),
                   const SizedBox(height: 24),
-                  _RunningHoursSection(dashState: dashState, totalWatts: totalWatts),
-                  const SizedBox(height: 32),
-                  AppSectionHeader(
-                    title: 'Active Devices',
-                    actionLabel: 'See all',
-                    onActionPressed: () => context.go('/devices'),
-                    padding: EdgeInsets.zero,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: _RunningHoursSection(dashState: dashState, totalWatts: totalWatts),
                   ),
-                  const SizedBox(height: 12),
-                  _DeviceSection(dashState: dashState),
+                  const SizedBox(height: 16),
+                  RoomFilterRow(dashState: dashState),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: _DeviceSection(dashState: dashState),
+                  ),
                   const SizedBox(height: 120), // Bottom nav padding
                 ]),
               ),
@@ -102,100 +105,103 @@ class _DashboardAppBar extends ConsumerWidget {
     final selectedHomeId = ref.watch(homeIdProvider);
     
     return SliverAppBar(
-      expandedHeight: 90,
-      collapsedHeight: 75,
+      expandedHeight: 70,
+      collapsedHeight: 65,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
         background: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
             child: GlassPanel(
               color: isDark ? null : AppColors.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               borderRadius: BorderRadius.circular(40),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: isDark ? AppColors.primary.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.2),
-                    backgroundImage: user?.profilePictureUrl != null ? NetworkImage(user.profilePictureUrl) : null,
-                    child: user?.profilePictureUrl == null
-                        ? Text(user?.name.initials ?? '?', style: AppTypography.h3.copyWith(color: isDark ? AppColors.primary : Colors.white))
-                        : null,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(DateTime.now().greeting, style: AppTypography.bodySmall.copyWith(color: isDark ? AppColors.textSecondary(isDark) : Colors.white70)),
-                        Text(user?.name.split(' ').first ?? 'Home', style: AppTypography.h2.copyWith(color: isDark ? null : Colors.white)),
-                      ],
-                    ),
-                  ),
-                  homesAsync.when(
-                    data: (homes) {
-                      if (homes.isEmpty) return const SizedBox();
-                      if (homes.length == 1) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Text(
-                            homes.first.name,
-                            style: AppTypography.titleMedium.copyWith(color: isDark ? null : Colors.white),
-                          ),
-                        );
-                      }
-                      
-                      final selectedHome = homes.firstWhere(
-                        (h) => h.id == selectedHomeId, 
-                        orElse: () => homes.first,
-                      );
-                      
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.primary.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: selectedHome.id,
-                            icon: const Icon(
-                              Icons.keyboard_arrow_down_rounded, 
-                              size: 18, 
-                              color: Colors.white,
+                  // Left Side: Profile Pic & Building/Home Name
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: isDark ? AppColors.primary.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.2),
+                        backgroundImage: user?.profilePictureUrl != null ? NetworkImage(user.profilePictureUrl) : null,
+                        child: user?.profilePictureUrl == null
+                            ? Text(user?.name.initials ?? '?', style: AppTypography.h3.copyWith(color: isDark ? AppColors.primary : Colors.white))
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      homesAsync.when(
+                        data: (homes) {
+                          if (homes.isEmpty) return const SizedBox();
+                          if (homes.length == 1) {
+                            return Text(
+                              homes.first.name,
+                              style: AppTypography.titleMedium.copyWith(
+                                color: isDark ? AppColors.textPrimary(isDark) : Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          }
+                          
+                          final selectedHome = homes.firstWhere(
+                            (h) => h.id == selectedHomeId, 
+                            orElse: () => homes.first,
+                          );
+                          
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isDark ? AppColors.primary.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            isDense: true,
-                            borderRadius: BorderRadius.circular(12),
-                            dropdownColor: AppColors.scaffoldBackground(isDark),
-                            items: homes.map((home) {
-                              return DropdownMenuItem<String>(
-                                value: home.id,
-                                child: Text(
-                                  home.name, 
-                                  style: AppTypography.bodyMedium.copyWith(
-                                    color: isDark ? AppColors.textPrimary(isDark) : Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: selectedHome.id,
+                                icon: Icon(
+                                  Icons.keyboard_arrow_down_rounded, 
+                                  size: 18, 
+                                  color: isDark ? AppColors.textPrimary(isDark) : Colors.white,
                                 ),
-                              );
-                            }).toList(),
-                            onChanged: (newId) {
-                              if (newId != null && newId != selectedHomeId) {
-                                ref.read(homeIdProvider.notifier).state = newId;
-                                ref.read(dashboardControllerProvider.notifier).loadDashboard(newId);
-                              }
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                    loading: () => const Padding(
-                      padding: EdgeInsets.only(right: 12.0),
-                      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                    ),
-                    error: (_, __) => const SizedBox(),
+                                isDense: true,
+                                borderRadius: BorderRadius.circular(12),
+                                dropdownColor: AppColors.scaffoldBackground(isDark),
+                                items: homes.map((home) {
+                                  return DropdownMenuItem<String>(
+                                    value: home.id,
+                                    child: Text(
+                                      home.name, 
+                                      style: AppTypography.bodyMedium.copyWith(
+                                        color: isDark ? AppColors.textPrimary(isDark) : Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (newId) {
+                                  if (newId != null && newId != selectedHomeId) {
+                                    ref.read(homeIdProvider.notifier).state = newId;
+                                    ref.read(dashboardControllerProvider.notifier).loadDashboard(newId);
+                                  }
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                        loading: () => const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                        error: (_, __) => const SizedBox(),
+                      ),
+                    ],
+                  ),
+                  
+                  // Right Side: Search & Notification Icons
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.search_rounded, color: isDark ? AppColors.textPrimary(isDark) : Colors.white),
+                        onPressed: () {},
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -412,12 +418,21 @@ class _RunningHoursSectionState extends State<_RunningHoursSection> {
   }
 }
 
-class _DeviceSection extends StatelessWidget {
+class _DeviceSection extends ConsumerWidget {
   final dynamic dashState;
   const _DeviceSection({required this.dashState});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedRoom = ref.watch(selectedRoomProvider);
+    
+    // Filter devices based on selected room
+    final filteredDevices = (dashState.devices as List).where((d) {
+      if (selectedRoom == 'All') return true;
+      String deviceRoom = d.roomId ?? d.assignmentType.toUpperCase();
+      return deviceRoom == selectedRoom;
+    }).toList();
+
     if (dashState.devices.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 32),
@@ -426,27 +441,24 @@ class _DeviceSection extends StatelessWidget {
             children: [
               Icon(Icons.devices_other_rounded, size: 52, color: AppColors.textSecondary(context.isDark).withValues(alpha: 0.4)),
               const SizedBox(height: 16),
-              Text(
-                'No devices yet',
-                style: AppTypography.bodyLarge.copyWith(
-                  color: AppColors.textSecondary(context.isDark),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Add a device to get started',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondary(context.isDark).withValues(alpha: 0.7),
-                ),
-              ),
+              Text('No devices added yet', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary(context.isDark))),
             ],
           ),
         ),
       );
     }
+    
+    if (filteredDevices.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: Center(
+          child: Text('No devices in $selectedRoom', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary(context.isDark))),
+        ),
+      );
+    }
 
     return Column(
-      children: dashState.devices.take(6).map<Widget>((device) => _DeviceListItem(device: device)).toList(),
+      children: filteredDevices.map<Widget>((device) => _DeviceListItem(device: device)).toList(),
     );
   }
 }

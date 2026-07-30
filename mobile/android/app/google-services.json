@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "555932166764",
+    "project_id": "neuro-touch-sensor",
+    "storage_bucket": "neuro-touch-sensor.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:555932166764:android:643a97cb7f8d5f0962c649",
+        "android_client_info": {
+          "package_name": "com.example.neuro_touch"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9z6_sRhn4kjZnJKfOdt886S26wwC_eo0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

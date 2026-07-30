@@ -380,3 +380,35 @@ func RefreshToken(c *fiber.Ctx) error {
 	})
 }
 
+type FCMUpdateRequest struct {
+	FCMToken string `json:"fcm_token"`
+}
+
+func UpdateFCMToken(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(string)
+
+	var req FCMUpdateRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Invalid request body",
+		})
+	}
+
+	var user models.User
+	if err := config.AppConfig.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success": false,
+			"error":   "User not found",
+		})
+	}
+
+	user.FCMToken = &req.FCMToken
+	config.AppConfig.DB.Save(&user)
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "FCM token updated successfully",
+	})
+}
+

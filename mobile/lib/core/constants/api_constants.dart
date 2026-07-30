@@ -1,10 +1,7 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://192.168.1.100:8080/api/v1',
-  );
+  static const String baseUrl = 'http://129.121.120.144:8080/api/v1';
 
   static const int connectTimeout = 30000;
   static const int receiveTimeout = 30000;

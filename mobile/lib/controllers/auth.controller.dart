@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/user.model.dart';
 import '../data/repositories/auth.repository.dart';
 import '../data/services/storage_service.dart';
+import '../data/services/api_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 
 enum AuthStatus { initial, authenticated, unauthenticated, loading, error }
 
@@ -49,13 +52,16 @@ class AuthState {
 class AuthController extends StateNotifier<AuthState> {
   final AuthRepository _repo;
   final StorageService _storage;
+  final ApiService _apiService;
   final GoogleSignIn _googleSignIn;
 
   AuthController({
     required AuthRepository repo,
     required StorageService storage,
+    required ApiService apiService,
   })  : _repo = repo,
         _storage = storage,
+        _apiService = apiService,
         _googleSignIn = GoogleSignIn(
           scopes: ['email', 'profile'],
           serverClientId: const String.fromEnvironment('GOOGLE_CLIENT_ID').isEmpty
@@ -100,6 +106,11 @@ class AuthController extends StateNotifier<AuthState> {
         await Future.delayed(Duration(seconds: 5) - elapsed);
       }
       state = targetState.copyWith(isInitialized: true);
+      
+      // Upload FCM token if authenticated
+      if (state.isAuthenticated) {
+        _syncFCMToken();
+      }
     } catch (e) {
       print('Auth initialization error: $e');
       final elapsed = stopwatch.elapsed;
@@ -162,27 +173,36 @@ class AuthController extends StateNotifier<AuthState> {
     try {
       final account = await _googleSignIn.signIn();
       if (account == null) {
-        state =
-            state.copyWith(status: AuthStatus.unauthenticated, clearError: true);
+        state = state.copyWith(status: AuthStatus.unauthenticated);
         return;
       }
       final auth = await account.authentication;
-      final idToken = auth.idToken;
-      if (idToken == null) throw Exception('Google auth failed: no ID token');
+      if (auth.idToken == null) throw Exception('Google sign in failed');
 
-      final user = await _repo.googleAuth(idToken);
-      state = state.copyWith(status: AuthStatus.authenticated, user: user);
-    } catch (e, stack) {
-      print('Google Sign-in Error: $e');
-      print('Google Sign-in Stack: $stack');
+      final user = await _repo.googleAuth(auth.idToken!);
+      state = AuthState(status: AuthStatus.authenticated, user: user, isInitialized: true);
+      
+      _syncFCMToken();
+    } catch (e) {
       state = state.copyWith(
         status: AuthStatus.error,
         error: _parseError(e),
       );
+      rethrow;
     }
   }
 
-  // --- Legacy Password Stubs (Obsolete) ---
+  Future<void> _syncFCMToken() async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final token = await messaging.getToken();
+      if (token != null) {
+        await _apiService.updateFCMToken(token);
+      }
+    } catch (e) {
+      debugPrint('Failed to sync FCM token locally: $e');
+    }
+  }// --- Legacy Password Stubs (Obsolete) ---
   Future<void> register({required String name, String? email, String? phone, required String password}) async {}
   Future<bool> forgotPassword({required String contact, required bool isEmail}) async => false;
   Future<bool> resetPassword({required String resetToken, required String newPassword}) async => false;
@@ -225,6 +245,7 @@ final authControllerProvider =
   return AuthController(
     repo: ref.read(authRepositoryProvider),
     storage: ref.read(storageServiceProvider),
+    apiService: ref.read(apiServiceProvider),
   );
 });
 

@@ -64,6 +64,22 @@ class MqttState {
         0.0;
   }
 
+  double getFan1Current(String deviceId) {
+    return (deviceFeatures[deviceId]?['temperature']?['fan1_current'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  double getFan2Current(String deviceId) {
+    return (deviceFeatures[deviceId]?['temperature']?['fan2_current'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  bool isFan1On(String deviceId) {
+    return getFan1Current(deviceId) > 0.05; // Treat > 0.05 Amps as ON
+  }
+
+  bool isFan2On(String deviceId) {
+    return getFan2Current(deviceId) > 0.05;
+  }
+
   bool getSwitchState(String deviceId, int switchIndex) {
     final val = getDeviceValue(deviceId, 'switch', 'sw$switchIndex');
     return val == true || val == 1 || val == 'ON';
