@@ -338,7 +338,7 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppSectionHeader(title: effective3Ph ? '3-Phase Energy Analytics' : 'Live Energy Analytics', padding: const EdgeInsets.only(bottom: 16)),
+        AppSectionHeader(title: eff3Ph ? '3-Phase Energy Analytics' : 'Live Energy Analytics', padding: const EdgeInsets.only(bottom: 16)),
         // ── Offline banner ──────────────────────────────────────────────────
         if (!isOnline)
           Container(
