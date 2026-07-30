@@ -170,8 +170,8 @@ type GasMotor struct {
 
 type DailyEnergyRecord struct {
 	ID             string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
-	DeviceID       string    `gorm:"type:varchar(50);not null;index" json:"device_id"`
-	Date           time.Time `gorm:"type:date;not null;index" json:"date"`
+	DeviceID       string    `gorm:"type:varchar(50);not null;uniqueIndex:idx_device_date" json:"device_id"`
+	Date           time.Time `gorm:"type:date;not null;uniqueIndex:idx_device_date" json:"date"`
 	StartEnergy    float64   `gorm:"not null" json:"start_energy"`
 	EndEnergy      float64   `gorm:"not null" json:"end_energy"`
 	UnitsConsumed  float64   `gorm:"not null" json:"units_consumed"`

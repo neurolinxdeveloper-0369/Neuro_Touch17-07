@@ -8,6 +8,7 @@ import (
 	"neurotouch/models"
 
 	"github.com/robfig/cron/v3"
+	"gorm.io/gorm/clause"
 )
 
 // InitEnergyAggregator starts the background cron jobs for energy processing.
@@ -85,7 +86,7 @@ func calculateDailyEnergy() {
 			avgPf = sumPf / float64(len(readings))
 		}
 
-		// Create daily record
+		// Upsert daily record — update if same device+date already exists
 		record := models.DailyEnergyRecord{
 			DeviceID:       meter.ID,
 			Date:           dateToday,
@@ -95,7 +96,10 @@ func calculateDailyEnergy() {
 			AvgPowerFactor: avgPf,
 		}
 
-		db.Create(&record)
+		db.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "device_id"}, {Name: "date"}},
+			DoUpdates: clause.AssignmentColumns([]string{"end_energy", "units_consumed", "avg_power_factor"}),
+		}).Create(&record)
 	}
 	log.Println("[CRON] calculateDailyEnergy job completed.")
 }
