@@ -62,6 +62,18 @@ class _MainShellState extends ConsumerState<MainShell> {
                 onTap: _onTap,
                 onAddTap: () => context.push('/add-device'),
               ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+        floatingActionButton: Container(
+          margin: EdgeInsets.only(bottom: isWide ? 0 : 85.0),
+          child: FloatingActionButton(
+            heroTag: 'ai_chatbot_fab',
+            backgroundColor: AppColors.primary,
+            elevation: 10,
+            onPressed: () => context.push('/automation/chat'),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 28),
+          ),
+        ),
       ),
     );
   }
