@@ -30,8 +30,7 @@ class _TempMonitorScreenState extends ConsumerState<TempMonitorScreen> {
 
   void _loadConfig() {
     try {
-      final configStr = widget.device.config ?? '{}';
-      final cfg = jsonDecode(configStr) as Map<String, dynamic>;
+      final cfg = widget.device.config;
       setState(() {
         _minTemp = (cfg['min_temp'] as num?)?.toDouble() ?? 20.0;
         _maxTemp = (cfg['max_temp'] as num?)?.toDouble() ?? 40.0;
@@ -45,8 +44,7 @@ class _TempMonitorScreenState extends ConsumerState<TempMonitorScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final configStr = widget.device.config ?? '{}';
-      final newConfig = Map<String, dynamic>.from(jsonDecode(configStr));
+      final newConfig = Map<String, dynamic>.from(widget.device.config);
       newConfig['min_temp'] = _minTemp;
       newConfig['max_temp'] = _maxTemp;
 
@@ -72,11 +70,11 @@ class _TempMonitorScreenState extends ConsumerState<TempMonitorScreen> {
     final mqttState = ref.watch(mqttControllerProvider);
     final isDark = context.isDark;
     
-    final currentTemp = ref.read(mqttControllerProvider.notifier).getTemperature(widget.device.id);
-    final isFan1On = ref.read(mqttControllerProvider.notifier).isFan1On(widget.device.id);
-    final isFan2On = ref.read(mqttControllerProvider.notifier).isFan2On(widget.device.id);
-    final fan1Current = ref.read(mqttControllerProvider.notifier).getFan1Current(widget.device.id);
-    final fan2Current = ref.read(mqttControllerProvider.notifier).getFan2Current(widget.device.id);
+    final currentTemp = mqttState.getTemperature(widget.device.id);
+    final isFan1On = mqttState.isFan1On(widget.device.id);
+    final isFan2On = mqttState.isFan2On(widget.device.id);
+    final fan1Current = mqttState.getFan1Current(widget.device.id);
+    final fan2Current = mqttState.getFan2Current(widget.device.id);
 
     return Scaffold(
       appBar: AppBar(
