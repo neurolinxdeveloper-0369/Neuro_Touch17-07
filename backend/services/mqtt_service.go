@@ -250,10 +250,14 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 					// ── 1-Phase mappings ─────────────────────────────────
 					energy.VoltageR, _ = strconv.ParseFloat(fmt.Sprintf("%v", data["voltage"]),      64)
 					energy.CurrentR, _ = strconv.ParseFloat(fmt.Sprintf("%v", data["current"]),      64)
-					energy.PowerR,   _ = strconv.ParseFloat(fmt.Sprintf("%v", data["power"]),        64) // kW
-					energy.EnergyR,  _ = strconv.ParseFloat(fmt.Sprintf("%v", data["energy_kwh"]),   64) // kWh
-					energy.Pf        = pf("power_factor")
-					energy.TotalEnergy, _ = strconv.ParseFloat(fmt.Sprintf("%v", data["energy_kwh"]), 64)
+					if p, err := strconv.ParseFloat(fmt.Sprintf("%v", data["power"]), 64); err == nil {
+						energy.PowerR = p / 1000.0 // Convert W to kW
+					}
+					if e, err := strconv.ParseFloat(fmt.Sprintf("%v", data["energy_kwh"]), 64); err == nil {
+						energy.EnergyR = e / 1000.0 // Convert Wh to kWh
+						energy.TotalEnergy = e / 1000.0
+					}
+					energy.Pf = pf("power_factor")
 
 					// ── 3-Phase mappings (R/Y/B) ──────────────────────────
 					if v, ok := data["voltage_r"]; ok { energy.VoltageR, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
