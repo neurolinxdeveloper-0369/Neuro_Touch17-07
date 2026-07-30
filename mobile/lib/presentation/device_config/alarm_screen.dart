@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import '../../core/theme/app_typography.dart';
 import '../common/widgets/glass_panel.dart';
 
@@ -26,16 +27,21 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
       vsync: this,
       duration: const Duration(milliseconds: 500),
     )..repeat(reverse: true);
+    
+    // Start continuous alarm sound
+    FlutterRingtonePlayer().playAlarm(looping: true, volume: 1.0);
   }
 
   @override
   void dispose() {
+    FlutterRingtonePlayer().stop();
     _animationController.dispose();
     _confirmationTimer?.cancel();
     super.dispose();
   }
 
   void _onCloseTapped() {
+    FlutterRingtonePlayer().stop(); // Pause sound to ask user
     setState(() {
       _showConfirmation = true;
       _countdown = 5;
@@ -59,38 +65,14 @@ class _AlarmScreenState extends State<AlarmScreen> with SingleTickerProviderStat
   }
 
   void _resumeAlarm() {
-    // If the alarm was dismissed via awesome_notifications, we trigger it again
-    final deviceId = widget.payload['device_id'] ?? 'Unknown';
-    final roomName = widget.payload['room_name'] ?? 'Unknown Room';
-    final temperature = widget.payload['temperature'] ?? 'N/A';
-    
-    AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: deviceId.hashCode,
-        channelKey: 'critical_alarm_channel',
-        title: 'CRITICAL ALERT: $roomName',
-        body: 'Temperature exceeded threshold! Current: $temperature°C',
-        category: NotificationCategory.Alarm,
-        wakeUpScreen: true,
-        fullScreenIntent: true,
-        criticalAlert: true,
-        autoDismissible: false,
-        payload: widget.payload,
-      ),
-      actionButtons: [
-        NotificationActionButton(
-          key: 'DISMISS',
-          label: 'DISMISS ALARM',
-          actionType: ActionType.Default,
-          isDangerousOption: true,
-        )
-      ],
-    );
+    // Timer expired without confirmation. Resume the alarm sound!
+    FlutterRingtonePlayer().playAlarm(looping: true, volume: 1.0);
   }
 
   void _onConfirmTapped() {
     // User successfully confirmed the dismissal
     _confirmationTimer?.cancel();
+    FlutterRingtonePlayer().stop();
     AwesomeNotifications().dismiss(widget.payload['device_id'].hashCode);
     Navigator.of(context).pop();
   }
