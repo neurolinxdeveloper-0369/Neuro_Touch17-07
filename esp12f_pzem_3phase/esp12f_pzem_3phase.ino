@@ -286,12 +286,32 @@ void publishPowerData() {
     // Use R phase frequency (most stable reference)
     float freq = isnan(hzR) ? (isnan(hzY) ? hzB : hzY) : hzR;
 
-    Serial.printf("[3PH] R: %.1fV %.4fA %.4fkW %.4fkWh  Y: %.1fV %.4fA %.4fkW %.4fkWh  B: %.1fV %.4fA %.4fkW %.4fkWh\n",
-        safeVR, isnan(iR)?0:iR, kwR, kwhR,
-        safeVY, isnan(iY)?0:iY, kwY, kwhY,
-        safeVB, isnan(iB)?0:iB, kwB, kwhB);
-    Serial.printf("[3PH] VRY=%.1f VYB=%.1f VBR=%.1f  Total: %.4fkW  %.4fkWh  PF=%.2f\n",
-        vRY, vYB, vBR, totalKW, totalKWh, avgPf);
+    Serial.println("--- Phase R ---");
+    Serial.print("Voltage: "); Serial.println(safeVR);
+    Serial.print("Current: "); Serial.println(isnan(iR)?0:iR);
+    Serial.print("Power: "); Serial.println(kwR);
+    Serial.print("Energy: "); Serial.println(kwhR);
+    Serial.print("Frequency: "); Serial.println(freq);
+    
+    Serial.println("--- Phase Y ---");
+    Serial.print("Voltage: "); Serial.println(safeVY);
+    Serial.print("Current: "); Serial.println(isnan(iY)?0:iY);
+    Serial.print("Power: "); Serial.println(kwY);
+    Serial.print("Energy: "); Serial.println(kwhY);
+    
+    Serial.println("--- Phase B ---");
+    Serial.print("Voltage: "); Serial.println(safeVB);
+    Serial.print("Current: "); Serial.println(isnan(iB)?0:iB);
+    Serial.print("Power: "); Serial.println(kwB);
+    Serial.print("Energy: "); Serial.println(kwhB);
+    
+    Serial.println("--- Totals & Lines ---");
+    Serial.print("VRY: "); Serial.println(vRY);
+    Serial.print("VYB: "); Serial.println(vYB);
+    Serial.print("VBR: "); Serial.println(vBR);
+    Serial.print("Total kW: "); Serial.println(totalKW);
+    Serial.print("Total kWh: "); Serial.println(totalKWh);
+    Serial.print("Avg PF: "); Serial.println(avgPf);
 
     // ── Build JSON payload ────────────────────────────────────────────────────
     StaticJsonDocument<512> doc;
