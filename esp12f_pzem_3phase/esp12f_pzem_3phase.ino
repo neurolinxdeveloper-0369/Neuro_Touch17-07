@@ -308,7 +308,7 @@ void loop() {
         if (millis() - lastPowerUpdate > POWER_UPDATE_INTERVAL_MS) {
             lastPowerUpdate = millis();
             
-            String pwrTopic = "nt/v1/" + savedDeviceId + "/stat/power";
+            String pwrTopic = "nt/v1/" + savedDeviceId + "/stat/telemetry";
             
             // Using a larger buffer since 3 phases = more data
             StaticJsonDocument<768> doc;

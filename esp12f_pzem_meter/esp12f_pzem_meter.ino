@@ -304,7 +304,7 @@ void loop() {
                 Serial.printf("[PZEM] V: %.1f, I: %.3f, P: %.1f, E: %.3f, Hz: %.1f, PF: %.2f\n", 
                               voltage, current, power, energy, frequency, pf);
                               
-                String pwrTopic = "nt/v1/" + savedDeviceId + "/stat/power";
+                String pwrTopic = "nt/v1/" + savedDeviceId + "/stat/telemetry";
                 StaticJsonDocument<256> doc;
                 doc["voltage"] = voltage;
                 doc["current"] = current;
