@@ -268,66 +268,71 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
 
   @override
   Widget build(BuildContext context) {
-    // Read 3-Phase Data (with fallbacks for legacy 1-phase payloads)
-    final v1 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'voltage_1') as num?)?.toDouble() ?? 
-               (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'voltage') as num?)?.toDouble() ?? 0.0;
-    final a1 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'current_1') as num?)?.toDouble() ?? 
-               (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'current') as num?)?.toDouble() ?? 0.0;
-    final w1 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'power_1') as num?)?.toDouble() ?? 
-               (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'power') as num?)?.toDouble() ?? 0.0;
-    final pf1 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'pf_1') as num?)?.toDouble() ?? 
-                (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'power_factor') as num?)?.toDouble() ?? 0.0;
+    // ── Read R/Y/B Phase Data from MQTT ────────────────────────────────────
+    double _m(String key) => (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', key) as num?)?.toDouble() ?? 0.0;
 
-    final v2 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'voltage_2') as num?)?.toDouble() ?? 0.0;
-    final a2 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'current_2') as num?)?.toDouble() ?? 0.0;
-    final w2 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'power_2') as num?)?.toDouble() ?? 0.0;
-    final pf2 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'pf_2') as num?)?.toDouble() ?? 0.0;
+    // Phase R (also used for 1-phase fallback)
+    final vR  = _m('voltage_r') > 0 ? _m('voltage_r') : _m('voltage');
+    final iR  = _m('current_r') > 0 ? _m('current_r') : _m('current');
+    final kwR = _m('power_r')   > 0 ? _m('power_r')   : _m('power');    // kW
+    final eR  = _m('energy_r')  > 0 ? _m('energy_r')  : _m('energy_kwh'); // kWh
 
-    final v3 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'voltage_3') as num?)?.toDouble() ?? 0.0;
-    final a3 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'current_3') as num?)?.toDouble() ?? 0.0;
-    final w3 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'power_3') as num?)?.toDouble() ?? 0.0;
-    final pf3 = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'pf_3') as num?)?.toDouble() ?? 0.0;
+    // Phase Y
+    final vY  = _m('voltage_y');
+    final iY  = _m('current_y');
+    final kwY = _m('power_y');
+    final eY  = _m('energy_y');
 
-    final totalPower = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'total_power') as num?)?.toDouble() ?? w1 + w2 + w3;
-    final totalEnergy = (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'total_energy') as num?)?.toDouble() ?? 
-                        (widget.mqttState.getDeviceValue(widget.device.id, 'telemetry', 'energy') as num?)?.toDouble() ?? 0.0;
-    
-    // Determine if it's 3-phase (if phase 2 or 3 has voltage > 0)
-    final is3Phase = v2 > 0 || v3 > 0;
-    
-    // Calculate 3-Phase Line-to-Line Voltage: (Avg V) * sqrt(3)
-    double calculatedVoltage = v1; 
-    if (is3Phase) {
-      double avgV = (v1 + v2 + v3) / 3;
-      calculatedVoltage = avgV * 1.73205; // Root 3 approximation
-    }
-    
+    // Phase B
+    final vB  = _m('voltage_b');
+    final iB  = _m('current_b');
+    final kwB = _m('power_b');
+    final eB  = _m('energy_b');
+
+    // Line-to-line voltages (sent by firmware)
+    final vRY = _m('v_ry');
+    final vYB = _m('v_yb');
+    final vBR = _m('v_br');
+
+    // Single PF (avg across phases)
+    final pf  = _m('pf') > 0 ? _m('pf') : _m('power_factor');
+
+    // Totals
+    final totalKW  = _m('total_power')  > 0 ? _m('total_power')  : (kwR + kwY + kwB);
+    final totalKWh = _m('total_energy') > 0 ? _m('total_energy') : (eR  + eY  + eB);
+
+    // 3-phase detected when phase Y or B has voltage
+    final is3Phase = vY > 0 || vB > 0;
+
     final isDark = context.isDark;
     final isOnline = widget.isOnline;
 
-    // ── Offline mode: zero everything and use grey palette ──────────────────
-    final double effectiveV1    = isOnline ? v1 : 0.0;
-    final double effectiveA1    = isOnline ? a1 : 0.0;
-    final double effectiveW1    = isOnline ? w1 : 0.0;
-    final double effectivePf1   = isOnline ? pf1 : 0.0;
-    final double effectiveV2    = isOnline ? v2 : 0.0;
-    final double effectiveA2    = isOnline ? a2 : 0.0;
-    final double effectiveW2    = isOnline ? w2 : 0.0;
-    final double effectivePf2   = isOnline ? pf2 : 0.0;
-    final double effectiveV3    = isOnline ? v3 : 0.0;
-    final double effectiveA3    = isOnline ? a3 : 0.0;
-    final double effectiveW3    = isOnline ? w3 : 0.0;
-    final double effectivePf3   = isOnline ? pf3 : 0.0;
-    final double effectiveTotal = isOnline ? totalPower : 0.0;
-    final double effectiveEnergy= isOnline ? totalEnergy : 0.0;
-    final bool   effective3Ph   = isOnline && is3Phase;
-    final double effectiveVDisp = isOnline ? calculatedVoltage : 0.0;
+    // ── Offline zeros ──────────────────────────────────────────────────────
+    final double effVR      = isOnline ? vR  : 0.0;
+    final double effVY      = isOnline ? vY  : 0.0;
+    final double effVB      = isOnline ? vB  : 0.0;
+    final double effVRY     = isOnline ? vRY : 0.0;
+    final double effVYB     = isOnline ? vYB : 0.0;
+    final double effVBR     = isOnline ? vBR : 0.0;
+    final double effIR      = isOnline ? iR  : 0.0;
+    final double effIY      = isOnline ? iY  : 0.0;
+    final double effIB      = isOnline ? iB  : 0.0;
+    final double effKWR     = isOnline ? kwR : 0.0;
+    final double effKWY     = isOnline ? kwY : 0.0;
+    final double effKWB     = isOnline ? kwB : 0.0;
+    final double effER      = isOnline ? eR  : 0.0;
+    final double effEY      = isOnline ? eY  : 0.0;
+    final double effEB      = isOnline ? eB  : 0.0;
+    final double effPf      = isOnline ? pf  : 0.0;
+    final double effTotalKW = isOnline ? totalKW  : 0.0;
+    final double effTotalE  = isOnline ? totalKWh : 0.0;
+    final bool   eff3Ph     = isOnline && is3Phase;
 
-    // Colour for gauge: grey when offline
+    // Gauge colour: grey offline, green→orange→red by kW
     Color powerColor = isOnline ? AppColors.success : Colors.grey.shade600;
     if (isOnline) {
-      if (totalPower > 5000) powerColor = AppColors.error;
-      else if (totalPower > 2000) powerColor = Colors.orangeAccent;
+      if (totalKW > 5.0)  powerColor = AppColors.error;
+      else if (totalKW > 2.0) powerColor = Colors.orangeAccent;
     }
 
     return Column(
@@ -414,11 +419,11 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
                         Icon(Icons.bolt_rounded, color: powerColor, size: 36),
                         const SizedBox(height: 4),
                         Text(
-                          effectiveTotal.toStringAsFixed(1),
+                          effTotalKW.toStringAsFixed(3),
                           style: AppTypography.h2.copyWith(color: powerColor, fontSize: 28),
                         ),
                         Text(
-                          isOnline ? 'Total Watts' : 'Offline',
+                          isOnline ? 'Total kW' : 'Offline',
                           style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(isDark)),
                         ),
                       ],
@@ -428,19 +433,19 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
               ),
               const SizedBox(height: 40),
               
-              // Master Metrics
+              // ── Master Metrics ────────────────────────────────────────────
               Row(
                 children: [
                   _MetricTile(
-                    label: effective3Ph ? '3-Phase Voltage (L-L)' : 'Voltage', 
-                    value: '${effectiveVDisp.toStringAsFixed(1)} V', 
+                    label: eff3Ph ? 'V-RY (Line)' : 'Voltage',
+                    value: eff3Ph ? '${effVRY.toStringAsFixed(1)} V' : '${effVR.toStringAsFixed(1)} V',
                     icon: Icons.electric_meter_rounded,
                     color: isOnline ? Colors.blueAccent : Colors.grey.shade600,
                   ),
                   const SizedBox(width: 12),
                   _MetricTile(
-                    label: effective3Ph ? 'Avg Current' : 'Current', 
-                    value: '${(effective3Ph ? ((effectiveA1 + effectiveA2 + effectiveA3) / 3) : effectiveA1).toStringAsFixed(4)} A', 
+                    label: eff3Ph ? 'R Phase Current' : 'Current',
+                    value: '${effIR.toStringAsFixed(4)} A',
                     icon: Icons.waves_rounded,
                     color: isOnline ? Colors.deepPurpleAccent : Colors.grey.shade600,
                   ),
@@ -450,36 +455,79 @@ class _EnergyPanelState extends State<_EnergyPanel> with SingleTickerProviderSta
               Row(
                 children: [
                   _MetricTile(
-                    label: 'Total Consumed', 
-                    value: '${effectiveEnergy.toStringAsFixed(4)} kWh', 
+                    label: 'Total Energy',
+                    value: '${effTotalE.toStringAsFixed(4)} kWh',
                     icon: Icons.eco_rounded,
                     color: isOnline ? AppColors.success : Colors.grey.shade600,
                   ),
                   const SizedBox(width: 12),
                   _MetricTile(
-                    label: effective3Ph ? 'Avg Power Factor' : 'Power Factor', 
-                    value: effective3Ph 
-                        ? ((effectivePf1 + effectivePf2 + effectivePf3) / 3).toStringAsFixed(2) 
-                        : effectivePf1.toStringAsFixed(2), 
+                    label: 'Power Factor',
+                    value: effPf.toStringAsFixed(2),
                     icon: Icons.speed_rounded,
                     color: isOnline ? Colors.orangeAccent : Colors.grey.shade600,
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-              
-              // Phase Breakdown
-              if (effective3Ph) ...[
+
+              // ── 3-Phase Detail Section ────────────────────────────────────
+              if (eff3Ph) ...[
                 Align(
-                  alignment: Alignment.centerLeft, 
-                  child: Text('Phase Breakdown', style: AppTypography.titleMedium)
+                  alignment: Alignment.centerLeft,
+                  child: Text('Phase Breakdown', style: AppTypography.titleMedium),
                 ),
                 const SizedBox(height: 12),
-                _PhaseRow(phaseName: 'Phase 1 (R)', v: effectiveV1, a: effectiveA1, w: effectiveW1, pf: effectivePf1, color: isOnline ? Colors.redAccent   : Colors.grey.shade600),
+                // Line voltages row
+                Row(
+                  children: [
+                    _SmallMetric(label: 'V-RY', value: '${effVRY.toStringAsFixed(1)} V', color: Colors.red.shade300),
+                    const SizedBox(width: 8),
+                    _SmallMetric(label: 'V-YB', value: '${effVYB.toStringAsFixed(1)} V', color: Colors.amber),
+                    const SizedBox(width: 8),
+                    _SmallMetric(label: 'V-BR', value: '${effVBR.toStringAsFixed(1)} V', color: Colors.blue.shade300),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                _PhaseRow3(
+                  phaseName: 'R Phase',
+                  vPN: effVR, current: effIR, powerKW: effKWR, energyKWh: effER,
+                  color: isOnline ? Colors.redAccent : Colors.grey.shade600,
+                ),
                 const SizedBox(height: 8),
-                _PhaseRow(phaseName: 'Phase 2 (Y)', v: effectiveV2, a: effectiveA2, w: effectiveW2, pf: effectivePf2, color: isOnline ? Colors.amber        : Colors.grey.shade600),
+                _PhaseRow3(
+                  phaseName: 'Y Phase',
+                  vPN: effVY, current: effIY, powerKW: effKWY, energyKWh: effEY,
+                  color: isOnline ? Colors.amber : Colors.grey.shade600,
+                ),
                 const SizedBox(height: 8),
-                _PhaseRow(phaseName: 'Phase 3 (B)', v: effectiveV3, a: effectiveA3, w: effectiveW3, pf: effectivePf3, color: isOnline ? Colors.blueAccent   : Colors.grey.shade600),
+                _PhaseRow3(
+                  phaseName: 'B Phase',
+                  vPN: effVB, current: effIB, powerKW: effKWB, energyKWh: effEB,
+                  color: isOnline ? Colors.blueAccent : Colors.grey.shade600,
+                ),
+              ],
+
+              // ── 1-Phase extra row (frequency) ─────────────────────────────
+              if (!eff3Ph) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _MetricTile(
+                      label: 'Power (kW)',
+                      value: '${effKWR.toStringAsFixed(4)} kW',
+                      icon: Icons.flash_on_rounded,
+                      color: isOnline ? Colors.deepOrangeAccent : Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 12),
+                    _MetricTile(
+                      label: 'Frequency',
+                      value: '${(isOnline ? (widget.mqttState.getDeviceValue(widget.device.id, "telemetry", "frequency") as num?)?.toDouble() ?? 0.0 : 0.0).toStringAsFixed(1)} Hz',
+                      icon: Icons.graphic_eq_rounded,
+                      color: isOnline ? Colors.tealAccent : Colors.grey.shade600,
+                    ),
+                  ],
+                ),
               ],
             ],
           ),
@@ -613,6 +661,101 @@ class _MetricTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Compact chip for line-to-line voltages (V-RY, V-YB, V-BR)
+class _SmallMetric extends StatelessWidget {
+  final String label, value;
+  final Color color;
+  const _SmallMetric({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Text(label, style: AppTypography.bodySmall.copyWith(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
+            Text(value, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600, fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Full phase row: phaseName | V(L-N) | Current | Power kW | Energy kWh
+class _PhaseRow3 extends StatelessWidget {
+  final String phaseName;
+  final double vPN, current, powerKW, energyKWh;
+  final Color color;
+
+  const _PhaseRow3({
+    required this.phaseName,
+    required this.vPN,
+    required this.current,
+    required this.powerKW,
+    required this.energyKWh,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          // Phase colour bar
+          Container(width: 4, height: 48, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: 10),
+          // Phase name
+          SizedBox(
+            width: 60,
+            child: Text(phaseName, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.bold, color: color)),
+          ),
+          // V (L-N)
+          Expanded(child: _Col(label: 'V(L-N)', value: '${vPN.toStringAsFixed(1)}V', isDark: isDark)),
+          // Current
+          Expanded(child: _Col(label: 'Current', value: '${current.toStringAsFixed(4)}A', isDark: isDark)),
+          // Power kW
+          Expanded(child: _Col(label: 'Power', value: '${powerKW.toStringAsFixed(4)}kW', isDark: isDark)),
+          // Energy kWh
+          Expanded(child: _Col(label: 'Energy', value: '${energyKWh.toStringAsFixed(4)}kWh', isDark: isDark)),
+        ],
+      ),
+    );
+  }
+}
+
+class _Col extends StatelessWidget {
+  final String label, value;
+  final bool isDark;
+  const _Col({required this.label, required this.value, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(label, style: AppTypography.bodySmall.copyWith(fontSize: 9, color: AppColors.textSecondary(isDark))),
+        const SizedBox(height: 2),
+        Text(value, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600, fontSize: 11)),
+      ],
     );
   }
 }

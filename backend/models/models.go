@@ -183,27 +183,33 @@ type EnergyReading struct {
 	ID          uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
 	DeviceID    string    `gorm:"type:varchar(50);not null;index" json:"device_id"`
 	
-	// Phase 1 (Used by 1-Phase & 3-Phase)
-	Voltage1    float64   `gorm:"type:real;default:0" json:"voltage_1"`
-	Current1    float64   `gorm:"type:real;default:0" json:"current_1"`
-	Power1      float64   `gorm:"type:real;default:0" json:"power_1"`
-	Pf1         float64   `gorm:"type:real;default:0" json:"pf_1"`
+	// Phase R / Single Phase
+	VoltageR    float64   `gorm:"type:real;default:0;column:voltage_1" json:"voltage_r"`
+	CurrentR    float64   `gorm:"type:real;default:0;column:current_1" json:"current_r"`
+	PowerR      float64   `gorm:"type:real;default:0;column:power_1" json:"power_r"`    // kW
+	EnergyR     float64   `gorm:"type:real;default:0;column:pf_1" json:"energy_r"`      // kWh (repurposed column)
 	
-	// Phase 2 (Used by 3-Phase only)
-	Voltage2    float64   `gorm:"type:real;default:0" json:"voltage_2"`
-	Current2    float64   `gorm:"type:real;default:0" json:"current_2"`
-	Power2      float64   `gorm:"type:real;default:0" json:"power_2"`
-	Pf2         float64   `gorm:"type:real;default:0" json:"pf_2"`
+	// Phase Y (3-Phase only)
+	VoltageY    float64   `gorm:"type:real;default:0;column:voltage_2" json:"voltage_y"`
+	CurrentY    float64   `gorm:"type:real;default:0;column:current_2" json:"current_y"`
+	PowerY      float64   `gorm:"type:real;default:0;column:power_2" json:"power_y"`    // kW
+	EnergyY     float64   `gorm:"type:real;default:0;column:pf_2" json:"energy_y"`      // kWh (repurposed column)
 	
-	// Phase 3 (Used by 3-Phase only)
-	Voltage3    float64   `gorm:"type:real;default:0" json:"voltage_3"`
-	Current3    float64   `gorm:"type:real;default:0" json:"current_3"`
-	Power3      float64   `gorm:"type:real;default:0" json:"power_3"`
-	Pf3         float64   `gorm:"type:real;default:0" json:"pf_3"`
+	// Phase B (3-Phase only)
+	VoltageB    float64   `gorm:"type:real;default:0;column:voltage_3" json:"voltage_b"`
+	CurrentB    float64   `gorm:"type:real;default:0;column:current_3" json:"current_b"`
+	PowerB      float64   `gorm:"type:real;default:0;column:power_3" json:"power_b"`    // kW
+	EnergyB     float64   `gorm:"type:real;default:0;column:pf_3" json:"energy_b"`      // kWh (repurposed column)
+	
+	// Line-to-Line Voltages (calculated from phase voltages)
+	VRY         float64   `gorm:"type:real;default:0" json:"v_ry"`
+	VYB         float64   `gorm:"type:real;default:0" json:"v_yb"`
+	VBR         float64   `gorm:"type:real;default:0" json:"v_br"`
 	
 	// System Totals
-	TotalPower  float64   `gorm:"type:real;default:0" json:"total_power"`
-	TotalEnergy float64   `gorm:"type:real;default:0" json:"total_energy"`
+	Pf          float64   `gorm:"type:real;default:0" json:"pf"`          // avg power factor
+	TotalPower  float64   `gorm:"type:real;default:0" json:"total_power"` // kW
+	TotalEnergy float64   `gorm:"type:real;default:0" json:"total_energy"` // kWh
 	Frequency   float64   `gorm:"type:real;default:0" json:"frequency"`
 	
 	RecordedAt  time.Time `gorm:"index;default:now()" json:"recorded_at"`

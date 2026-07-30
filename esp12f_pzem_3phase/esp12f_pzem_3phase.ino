@@ -3,20 +3,36 @@
  * Neuro Power Meter — 3-Phase ESP12F Firmware (PZEM-004T v3.0)
  * ═══════════════════════════════════════════════════════════════
  *
- * IMPORTANT HARDWARE NOTE FOR 3-PHASE:
- * This version uses 3 separate Serial ports. You do NOT need to change 
- * the Modbus addresses of the PZEM modules. They can all remain at default.
- * 
- * Wire each PZEM to its respective RX/TX pins on the ESP12F.
- * 
- * Libraries required (install via Arduino Library Manager):
- *   - ESP8266WiFi        (built-in)
- *   - ESP8266WebServer   (built-in)
- *   - ESP8266HTTPClient  (built-in)
- *   - ArduinoJson        v6.x
- *   - PubSubClient       (by Nick O'Leary)
- *   - PZEM004Tv30        (by Jakub Mandula)
- *   - SoftwareSerial     (built-in)
+ * WIRING (Shared 2-wire Modbus bus):
+ *   All 3 PZEMs share the SAME RX (D5/GPIO14) and TX (D6/GPIO12) pins.
+ *   Each PZEM must be pre-programmed to a unique Modbus address:
+ *     Phase R → address 0x01
+ *     Phase Y → address 0x02
+ *     Phase B → address 0x03
+ *
+ * HOW TO SET MODBUS ADDRESS (one PZEM at a time):
+ *   Connect only ONE PZEM, flash the address-setter sketch, then repeat for next.
+ *
+ * Libraries required:
+ *   - ESP8266WiFi, ESP8266WebServer, ESP8266HTTPClient (built-in)
+ *   - ArduinoJson  v6.x
+ *   - PubSubClient (by Nick O'Leary)
+ *   - PZEM004Tv30  (by Jakub Mandula)
+ *   - SoftwareSerial (built-in)
+ *
+ * JSON Payload Topics:
+ *   nt/v1/{device_id}/stat/telemetry
+ *   {
+ *     "voltage_r": 230.5,  "voltage_y": 229.8,  "voltage_b": 231.2,   (V, phase-to-neutral)
+ *     "v_ry": 399.2,        "v_yb": 397.8,        "v_br": 400.1,        (V, line-to-line)
+ *     "current_r": 5.1234, "current_y": 4.9876, "current_b": 5.2341,  (A)
+ *     "power_r": 1.178,    "power_y": 1.145,    "power_b": 1.210,     (kW)
+ *     "energy_r": 0.0030,  "energy_y": 0.0025,  "energy_b": 0.0035,  (kWh)
+ *     "frequency": 49.9,                                               (Hz, from R phase)
+ *     "pf": 0.96,                                                       (avg power factor)
+ *     "total_power": 3.533,                                             (kW)
+ *     "total_energy": 0.0090                                            (kWh)
+ *   }
  */
 
 #include <ESP8266WiFi.h>
@@ -27,47 +43,44 @@
 #include <PubSubClient.h>
 #include <PZEM004Tv30.h>
 #include <SoftwareSerial.h>
+#include <ArduinoJson.h>
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
-#define AP_SSID "Three_Phase_1X"
+#define AP_SSID     "Three_Phase_1X"
 #define AP_PASSWORD ""
-#define AP_CHANNEL 6
-#define AP_IP_ADDR 192, 168, 0, 4
-#define AP_GATEWAY 192, 168, 0, 1
-#define AP_SUBNET  255, 255, 255, 0
+#define AP_CHANNEL  6
+#define AP_IP_ADDR  192, 168, 0, 4
+#define AP_GATEWAY  192, 168, 0, 1
+#define AP_SUBNET   255, 255, 255, 0
 
-// Backend & MQTT Server configurations
 #define BACKEND_HOST           "http://129.121.120.144:8080"
 #define BACKEND_PROVISION_PATH "/api/v1/provision/mac-confirm"
-#define MQTT_SERVER "129.121.120.144" // Replace with your actual MQTT broker IP
-#define MQTT_PORT 8086
-#define MQTT_USER "admin"
-#define MQTT_PASS "Neurolinx@123"
+#define MQTT_SERVER            "129.121.120.144"
+#define MQTT_PORT              8086
+#define MQTT_USER              "admin"
+#define MQTT_PASS              "Neurolinx@123"
 
-// GPIO pins
-#define LED_PIN 2      // Blue LED (active LOW on ESP12F)
+// ─── GPIO ────────────────────────────────────────────────────────────────────
+#define LED_PIN    2    // Blue LED (active LOW on ESP12F)
 
-// Phase 1 PZEM
-#define PZEM1_RX_PIN 5  // D1
-#define PZEM1_TX_PIN 4  // D2
+// Shared 2-wire Modbus bus for all 3 PZEMs
+#define PZEM_RX_PIN 14  // D5 — connect to all 3 PZEM TX lines
+#define PZEM_TX_PIN 12  // D6 — connect to all 3 PZEM RX lines
 
-// Phase 2 PZEM
-#define PZEM2_RX_PIN 14 // D5
-#define PZEM2_TX_PIN 12 // D6
+// Modbus addresses (pre-programmed per phase)
+#define ADDR_R  0x01
+#define ADDR_Y  0x02
+#define ADDR_B  0x03
 
-// Phase 3 PZEM
-#define PZEM3_RX_PIN 13 // D7
-#define PZEM3_TX_PIN 15 // D8
-
-// EEPROM layout
+// ─── EEPROM layout ───────────────────────────────────────────────────────────
 #define EEPROM_SIZE  256
 #define SSID_ADDR    0
 #define PASS_ADDR    64
 #define DEVID_ADDR   192
 #define VALID_FLAG   240
 
-// Timeouts
+// ─── Intervals ───────────────────────────────────────────────────────────────
 #define WIFI_CONNECT_TIMEOUT_MS  30000
 #define HTTP_TIMEOUT_MS          8000
 #define POWER_UPDATE_INTERVAL_MS 5000
@@ -78,280 +91,327 @@ ESP8266WebServer server(80);
 WiFiClient       wifiClient;
 PubSubClient     mqttClient(wifiClient);
 
-// Separate Serial Buses for each Phase
-SoftwareSerial   pzemSerial1(PZEM1_RX_PIN, PZEM1_TX_PIN);
-SoftwareSerial   pzemSerial2(PZEM2_RX_PIN, PZEM2_TX_PIN);
-SoftwareSerial   pzemSerial3(PZEM3_RX_PIN, PZEM3_TX_PIN);
+// Single SoftwareSerial bus shared by all 3 PZEMs
+SoftwareSerial   pzemSerial(PZEM_RX_PIN, PZEM_TX_PIN);
 
-// Initialize 3 PZEM instances (they can all use default address 0x01 now)
-PZEM004Tv30 pzemL1(pzemSerial1);
-PZEM004Tv30 pzemL2(pzemSerial2);
-PZEM004Tv30 pzemL3(pzemSerial3);
+// Three PZEM instances on the shared bus — each with its own Modbus address
+PZEM004Tv30 pzemR(&pzemSerial, ADDR_R);   // Phase R (Red)
+PZEM004Tv30 pzemY(&pzemSerial, ADDR_Y);   // Phase Y (Yellow)
+PZEM004Tv30 pzemB(&pzemSerial, ADDR_B);   // Phase B (Blue)
 
-String savedSSID     = "";
-String savedPassword = "";
-String savedDeviceId = "";
-bool   isProvisioned = false;
+String savedSSID      = "";
+String savedPassword  = "";
+String savedDeviceId  = "";
+bool   isProvisioned  = false;
 unsigned long lastPowerUpdate = 0;
-unsigned long lastHeartbeat = 0;
+unsigned long lastHeartbeat   = 0;
 
 // ─── EEPROM Helpers ──────────────────────────────────────────────────────────
 void writeString(int addr, const String& str, int maxLen) {
     int len = min((int)str.length(), maxLen - 1);
-    for (int i = 0; i < len; i++) {
-        EEPROM.write(addr + i, str[i]);
-    }
-    EEPROM.write(addr + len, '\0');
+    for (int i = 0; i < len; i++) EEPROM.write(addr + i, str[i]);
+    EEPROM.write(addr + len, 0);
+    EEPROM.commit();
 }
+
 String readString(int addr, int maxLen) {
-    String s = "";
+    String result = "";
     for (int i = 0; i < maxLen; i++) {
-        char c = (char)EEPROM.read(addr + i);
-        if (c == '\0') break;
-        s += c;
+        char c = EEPROM.read(addr + i);
+        if (c == 0) break;
+        result += c;
     }
-    return s;
+    return result;
 }
-void saveCredentials(const String& ssid, const String& pass, const String& deviceId) {
-    EEPROM.begin(EEPROM_SIZE);
+
+bool isProvisioning() {
+    return EEPROM.read(VALID_FLAG) != 0xAB;
+}
+
+void markProvisioned(const String& ssid, const String& pass, const String& deviceId) {
     writeString(SSID_ADDR,  ssid,     64);
     writeString(PASS_ADDR,  pass,     128);
-    writeString(DEVID_ADDR, deviceId, 32);
+    writeString(DEVID_ADDR, deviceId, 48);
     EEPROM.write(VALID_FLAG, 0xAB);
     EEPROM.commit();
-    EEPROM.end();
-    savedSSID = ssid;
-    savedPassword = pass;
-    savedDeviceId = deviceId;
-    Serial.println("[EEPROM] Credentials saved.");
-}
-bool loadCredentials() {
-    EEPROM.begin(EEPROM_SIZE);
-    byte flag = EEPROM.read(VALID_FLAG);
-    if (flag != 0xAB) {
-        EEPROM.end();
-        return false;
-    }
-    savedSSID     = readString(SSID_ADDR,  64);
-    savedPassword = readString(PASS_ADDR,  128);
-    savedDeviceId = readString(DEVID_ADDR, 32);
-    EEPROM.end();
-    return true;
-}
-void clearCredentials() {
-    EEPROM.begin(EEPROM_SIZE);
-    EEPROM.write(VALID_FLAG, 0x00);
-    EEPROM.commit();
-    EEPROM.end();
 }
 
-// ─── LED Helpers ─────────────────────────────────────────────────────────────
-void ledOn()  { digitalWrite(LED_PIN, LOW); }
-void ledOff() { digitalWrite(LED_PIN, HIGH); }
-void blinkLed(int times, int delayMs = 200) {
-    for (int i = 0; i < times; i++) {
-        ledOn(); delay(delayMs);
-        ledOff(); delay(delayMs);
-    }
-}
+// ─── AP Provisioning ─────────────────────────────────────────────────────────
+void startAPMode() {
+    IPAddress ip(AP_IP_ADDR), gw(AP_GATEWAY), sn(AP_SUBNET);
+    WiFi.softAPConfig(ip, gw, sn);
+    WiFi.softAP(AP_SSID, AP_PASSWORD, AP_CHANNEL);
+    Serial.println("[AP] Provisioning AP started: " + String(AP_SSID));
 
-// ─── MQTT Handlers ───────────────────────────────────────────────────────────
-void mqttCallback(char* topic, byte* payload, unsigned int length) {
-    String message = "";
-    for (int i = 0; i < length; i++) message += (char)payload[i];
-    Serial.println("[MQTT] Received on " + String(topic) + ": " + message);
-    
-    // Process commands here (e.g., reset energy for all phases)
-    if (String(topic).endsWith("/cmd/reset_energy")) {
-        Serial.println("[PZEM] App requested energy reset for all phases.");
-        pzemL1.resetEnergy();
-        pzemL2.resetEnergy();
-        pzemL3.resetEnergy();
-    }
-}
-
-void reconnectMqtt() {
-    while (!mqttClient.connected()) {
-        Serial.print("[MQTT] Attempting connection...");
-        String clientId = "NT-PZEM3-" + String(WiFi.macAddress());
-        String lwtTopic = "nt/v1/" + savedDeviceId + "/lwt";
-
-        if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASS, lwtTopic.c_str(), 1, true, "{\"status\":\"offline\"}")) {
-            Serial.println("connected");
-            mqttClient.publish(lwtTopic.c_str(), "{\"status\":\"online\"}", true);
-            String cmdTopic = "nt/v1/" + savedDeviceId + "/cmd/#";
-            mqttClient.subscribe(cmdTopic.c_str());
-        } else {
-            Serial.print("failed, rc=");
-            Serial.print(mqttClient.state());
-            Serial.println(" try again in 5 seconds");
-            delay(5000);
+    server.on("/provision", HTTP_POST, []() {
+        String body = server.arg("plain");
+        StaticJsonDocument<256> doc;
+        if (deserializeJson(doc, body) != DeserializationError::Ok) {
+            server.send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+            return;
         }
-    }
-}
-
-// ─── AP Mode HTTP Handlers ────────────────────────────────────────────────────
-void handleRoot() {
-    StaticJsonDocument<256> doc;
-    doc["device"]       = "Three_Phase_1X";
-    doc["sensor"]       = "PZEM-004T-100A-3Phase";
-    doc["mac_address"]  = WiFi.softAPmacAddress();
-    doc["firmware"]     = "1.0.0-pzem3";
-    doc["status"]       = "awaiting_config";
-    String body; serializeJson(doc, body);
-    server.send(200, "application/json", body);
-}
-void handleConfig() {
-    if (!server.hasArg("plain")) {
-        server.send(400, "application/json", "{\"error\":\"No body\"}");
-        return;
-    }
-    StaticJsonDocument<256> doc;
-    deserializeJson(doc, server.arg("plain"));
-    const char* ssid     = doc["ssid"]      | "";
-    const char* password = doc["password"]  | "";
-    const char* deviceId = doc["device_id"] | "";
-    
-    server.send(200, "application/json", "{\"success\":true}");
-    delay(100); server.handleClient(); // Flush response
-    saveCredentials(String(ssid), String(password), String(deviceId));
-    ESP.restart(); // Reboot to connect to Wi-Fi
-}
-void handleReset() {
-    server.send(200, "application/json", "{\"success\":true}");
-    delay(500); clearCredentials(); ESP.restart();
-}
-
-// ─── Wi-Fi Station Connection ─────────────────────────────────────────────────
-void connectToWiFi(const String& ssid, const String& password) {
-    Serial.println("[WiFi] Connecting to: " + ssid);
-    blinkLed(3, 100);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid.c_str(), password.c_str());
-    
-    unsigned long startMs = millis();
-    while (WiFi.status() != WL_CONNECTED) {
-        if (millis() - startMs > WIFI_CONNECT_TIMEOUT_MS) {
-            Serial.println("[WiFi] Connection TIMEOUT. Rebooting to AP.");
-            clearCredentials();
-            ESP.restart();
+        String ssid     = doc["ssid"]      | "";
+        String pass     = doc["password"]  | "";
+        String deviceId = doc["device_id"] | "";
+        if (ssid.isEmpty() || deviceId.isEmpty()) {
+            server.send(400, "application/json", "{\"success\":false,\"error\":\"Missing fields\"}");
+            return;
         }
+        markProvisioned(ssid, pass, deviceId);
+        server.send(200, "application/json", "{\"success\":true}");
         delay(500);
-    }
-    Serial.println("\n[WiFi] Connected! IP: " + WiFi.localIP().toString());
-    isProvisioned = true;
-    ledOn();
-    
-    String url = String(BACKEND_HOST) + String(BACKEND_PROVISION_PATH) + "?mac=" + WiFi.macAddress() + "&device_id=" + savedDeviceId;
+        ESP.restart();
+    });
+    server.begin();
+}
+
+// ─── Backend MAC Confirm ──────────────────────────────────────────────────────
+void confirmMACWithBackend() {
+    String mac = WiFi.macAddress();
+    mac.replace(":", "%3A");
+    String url = String(BACKEND_HOST) + BACKEND_PROVISION_PATH
+               + "?mac=" + mac + "&device_id=" + savedDeviceId;
+
+    WiFiClient httpClient;
     HTTPClient http;
-    http.begin(wifiClient, url);
+    http.begin(httpClient, url);
     http.setTimeout(HTTP_TIMEOUT_MS);
-    int httpCode = http.GET();
-    if (httpCode == HTTP_CODE_OK) {
-        blinkLed(5, 300);
-        ledOn();
-    }
+    int code = http.GET();
+    Serial.printf("[HTTP] MAC confirm → %d\n", code);
     http.end();
 }
 
-// ─── Helper for JSON Payload Generation ───────────────────────────────────────
-void populatePhaseJson(JsonObject obj, PZEM004Tv30& pzem, int phaseNum) {
-    float voltage = pzem.voltage();
-    if (!isnan(voltage)) {
-        String p = String(phaseNum);
-        obj["voltage_" + p] = voltage;
-        obj["current_" + p] = pzem.current();
-        obj["power_" + p] = pzem.power();
-        obj["pf_" + p] = pzem.pf();
+// ─── MQTT ────────────────────────────────────────────────────────────────────
+void onMqttMessage(char* topic, byte* payload, unsigned int length) {
+    // Commands can be handled here if needed
+}
+
+void connectMQTT() {
+    mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+    mqttClient.setCallback(onMqttMessage);
+    String clientId = "nt3ph-" + savedDeviceId;
+    Serial.print("[MQTT] Connecting...");
+    if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
+        Serial.println(" Connected!");
+        String cmdTopic = "nt/v1/" + savedDeviceId + "/cmd/#";
+        mqttClient.subscribe(cmdTopic.c_str());
+    } else {
+        Serial.printf(" Failed (rc=%d)\n", mqttClient.state());
     }
 }
 
-// ─── Setup & Loop ────────────────────────────────────────────────────────────
+void publishHeartbeat() {
+    if (!mqttClient.connected()) return;
+    String topic = "nt/v1/" + savedDeviceId + "/stat/telemetry";
+    StaticJsonDocument<128> doc;
+    doc["rssi"]       = WiFi.RSSI();
+    doc["fw_version"] = "1.1.0-3ph";
+    doc["uptime_sec"] = millis() / 1000;
+    String payload;
+    serializeJson(doc, payload);
+    mqttClient.publish(topic.c_str(), payload.c_str());
+    Serial.printf("[HB] Published heartbeat\n");
+}
+
+// ─── Line-to-Line Voltage Calculation ────────────────────────────────────────
+// Formula: V_LL = sqrt(Va² + Vb² + Va·Vb)  (for balanced/unbalanced systems)
+float lineVoltage(float va, float vb) {
+    return sqrt((va * va) + (vb * vb) + (va * vb));
+}
+
+// ─── 3-Phase Telemetry Publisher ─────────────────────────────────────────────
+void publishPowerData() {
+    if (!mqttClient.connected()) return;
+
+    // Read Phase R
+    float vR  = pzemR.voltage();
+    float iR  = pzemR.current();
+    float wR  = pzemR.power();    // Watts
+    float eR  = pzemR.energy();   // kWh (library returns kWh)
+    float hzR = pzemR.frequency();
+    float pfR = pzemR.pf();
+
+    // Read Phase Y
+    float vY  = pzemY.voltage();
+    float iY  = pzemY.current();
+    float wY  = pzemY.power();    // Watts
+    float eY  = pzemY.energy();   // kWh
+    float hzY = pzemY.frequency();
+    float pfY = pzemY.pf();
+
+    // Read Phase B
+    float vB  = pzemB.voltage();
+    float iB  = pzemB.current();
+    float wB  = pzemB.power();    // Watts
+    float eB  = pzemB.energy();   // kWh
+    float hzB = pzemB.frequency();
+    float pfB = pzemB.pf();
+
+    // Validate — skip if all phases are NaN (bus not responding)
+    if (isnan(vR) && isnan(vY) && isnan(vB)) {
+        Serial.println("[PZEM] All phases NaN — check wiring/addresses");
+        return;
+    }
+
+    // ── Power: Watts → kW ────────────────────────────────────────────────────
+    float kwR = isnan(wR) ? 0.0f : wR / 1000.0f;
+    float kwY = isnan(wY) ? 0.0f : wY / 1000.0f;
+    float kwB = isnan(wB) ? 0.0f : wB / 1000.0f;
+
+    // ── Energy: library already returns kWh ──────────────────────────────────
+    float kwhR = isnan(eR) ? 0.0f : eR;
+    float kwhY = isnan(eY) ? 0.0f : eY;
+    float kwhB = isnan(eB) ? 0.0f : eB;
+
+    // ── Totals ────────────────────────────────────────────────────────────────
+    float totalKW  = kwR + kwY + kwB;
+    float totalKWh = kwhR + kwhY + kwhB;
+
+    // ── Line-to-Line Voltages ─────────────────────────────────────────────────
+    float safeVR = isnan(vR) ? 0.0f : vR;
+    float safeVY = isnan(vY) ? 0.0f : vY;
+    float safeVB = isnan(vB) ? 0.0f : vB;
+    float vRY = lineVoltage(safeVR, safeVY);
+    float vYB = lineVoltage(safeVY, safeVB);
+    float vBR = lineVoltage(safeVB, safeVR);
+
+    // ── Average PF (skip NaN phases) ─────────────────────────────────────────
+    float pfSum = 0.0f; int pfCount = 0;
+    if (!isnan(pfR)) { pfSum += pfR; pfCount++; }
+    if (!isnan(pfY)) { pfSum += pfY; pfCount++; }
+    if (!isnan(pfB)) { pfSum += pfB; pfCount++; }
+    float avgPf = pfCount > 0 ? pfSum / pfCount : 0.0f;
+
+    // Use R phase frequency (most stable reference)
+    float freq = isnan(hzR) ? (isnan(hzY) ? hzB : hzY) : hzR;
+
+    Serial.printf("[3PH] R: %.1fV %.4fA %.4fkW %.4fkWh  Y: %.1fV %.4fA %.4fkW %.4fkWh  B: %.1fV %.4fA %.4fkW %.4fkWh\n",
+        safeVR, isnan(iR)?0:iR, kwR, kwhR,
+        safeVY, isnan(iY)?0:iY, kwY, kwhY,
+        safeVB, isnan(iB)?0:iB, kwB, kwhB);
+    Serial.printf("[3PH] VRY=%.1f VYB=%.1f VBR=%.1f  Total: %.4fkW  %.4fkWh  PF=%.2f\n",
+        vRY, vYB, vBR, totalKW, totalKWh, avgPf);
+
+    // ── Build JSON payload ────────────────────────────────────────────────────
+    StaticJsonDocument<512> doc;
+
+    // Phase-to-neutral voltages
+    if (!isnan(vR)) doc["voltage_r"] = serialized(String(safeVR, 1));
+    if (!isnan(vY)) doc["voltage_y"] = serialized(String(safeVY, 1));
+    if (!isnan(vB)) doc["voltage_b"] = serialized(String(safeVB, 1));
+
+    // Line-to-line voltages
+    doc["v_ry"] = serialized(String(vRY, 1));
+    doc["v_yb"] = serialized(String(vYB, 1));
+    doc["v_br"] = serialized(String(vBR, 1));
+
+    // Phase currents
+    if (!isnan(iR)) doc["current_r"] = serialized(String(iR, 4));
+    if (!isnan(iY)) doc["current_y"] = serialized(String(iY, 4));
+    if (!isnan(iB)) doc["current_b"] = serialized(String(iB, 4));
+
+    // Phase power (kW)
+    doc["power_r"] = serialized(String(kwR, 4));
+    doc["power_y"] = serialized(String(kwY, 4));
+    doc["power_b"] = serialized(String(kwB, 4));
+
+    // Phase energy (kWh)
+    doc["energy_r"] = serialized(String(kwhR, 4));
+    doc["energy_y"] = serialized(String(kwhY, 4));
+    doc["energy_b"] = serialized(String(kwhB, 4));
+
+    // Shared values
+    if (!isnan(freq)) doc["frequency"] = serialized(String(freq, 1));
+    doc["pf"]           = serialized(String(avgPf, 2));
+    doc["total_power"]  = serialized(String(totalKW,  4));
+    doc["total_energy"] = serialized(String(totalKWh, 4));
+
+    String topic = "nt/v1/" + savedDeviceId + "/stat/telemetry";
+    String payload;
+    serializeJson(doc, payload);
+    mqttClient.publish(topic.c_str(), payload.c_str());
+    Serial.println("[MQTT] Published 3-phase telemetry");
+}
+
+// ─── WiFi Connection ─────────────────────────────────────────────────────────
+bool connectWiFi(const String& ssid, const String& pass) {
+    WiFi.begin(ssid.c_str(), pass.c_str());
+    Serial.print("[WiFi] Connecting to " + ssid);
+    unsigned long start = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - start < WIFI_CONNECT_TIMEOUT_MS) {
+        delay(500); Serial.print(".");
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("\n[WiFi] Connected! IP: " + WiFi.localIP().toString());
+        return true;
+    }
+    Serial.println("\n[WiFi] Failed.");
+    return false;
+}
+
+// ─── Setup ───────────────────────────────────────────────────────────────────
 void setup() {
     Serial.begin(115200);
+    EEPROM.begin(EEPROM_SIZE);
     pinMode(LED_PIN, OUTPUT);
-    ledOff();
-    
-    mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
-    mqttClient.setCallback(mqttCallback);
-    
-    if (loadCredentials() && savedSSID.length() > 0) {
-        connectToWiFi(savedSSID, savedPassword);
-    } else {
-        Serial.println("[Boot] No credentials — starting AP mode");
-        WiFi.mode(WIFI_AP);
-        IPAddress apIP(AP_IP_ADDR); IPAddress gateway(AP_GATEWAY); IPAddress subnet(AP_SUBNET);
-        WiFi.softAPConfig(apIP, gateway, subnet);
-        WiFi.softAP(AP_SSID, AP_PASSWORD, AP_CHANNEL);
-        server.on("/", HTTP_GET, handleRoot);
-        server.on("/config", HTTP_POST, handleConfig);
-        server.on("/reset", HTTP_POST, handleReset);
-        server.begin();
+    digitalWrite(LED_PIN, HIGH); // OFF initially
+
+    pzemSerial.begin(9600);
+
+    Serial.println("\n[BOOT] Neuro 3-Phase Power Meter v1.1.0");
+
+    if (isProvisioning()) {
+        Serial.println("[BOOT] Not provisioned — starting AP mode");
+        startAPMode();
+        return;
     }
+
+    savedSSID     = readString(SSID_ADDR,  64);
+    savedPassword = readString(PASS_ADDR,  128);
+    savedDeviceId = readString(DEVID_ADDR, 48);
+    isProvisioned = true;
+    Serial.println("[BOOT] Device ID: " + savedDeviceId);
+
+    WiFi.mode(WIFI_STA);
+    if (!connectWiFi(savedSSID, savedPassword)) {
+        Serial.println("[BOOT] WiFi failed — restarting in AP mode");
+        EEPROM.write(VALID_FLAG, 0xFF);
+        EEPROM.commit();
+        ESP.restart();
+        return;
+    }
+
+    digitalWrite(LED_PIN, LOW); // LED ON = connected
+
+    confirmMACWithBackend();
+    connectMQTT();
+    publishHeartbeat();
+    lastHeartbeat = millis();
 }
 
+// ─── Loop ────────────────────────────────────────────────────────────────────
 void loop() {
     if (!isProvisioned) {
         server.handleClient();
-        static unsigned long lastBlink = 0;
-        if (millis() - lastBlink > 2000) {
-            lastBlink = millis();
-            blinkLed(1, 150);
-        }
-    } else {
-        if (!mqttClient.connected()) {
-            reconnectMqtt();
-        }
-        mqttClient.loop();
-        
-        // Publish 3-Phase power data every 5 seconds
-        if (millis() - lastPowerUpdate > POWER_UPDATE_INTERVAL_MS) {
-            lastPowerUpdate = millis();
-            
-            String pwrTopic = "nt/v1/" + savedDeviceId + "/stat/telemetry";
-            
-            // Using a larger buffer since 3 phases = more data
-            StaticJsonDocument<768> doc;
-            
-            // Populate Phase 1, 2, 3 flat keys
-            populatePhaseJson(doc.as<JsonObject>(), pzemL1, 1);
-            populatePhaseJson(doc.as<JsonObject>(), pzemL2, 2);
-            populatePhaseJson(doc.as<JsonObject>(), pzemL3, 3);
-            
-            // Calculate Totals
-            float tEnergy = 0;
-            float tPower = 0;
-            if(!isnan(pzemL1.energy())) { tEnergy += pzemL1.energy(); tPower += pzemL1.power(); }
-            if(!isnan(pzemL2.energy())) { tEnergy += pzemL2.energy(); tPower += pzemL2.power(); }
-            if(!isnan(pzemL3.energy())) { tEnergy += pzemL3.energy(); tPower += pzemL3.power(); }
-            
-            doc["total_energy"] = tEnergy;
-            doc["total_power"] = tPower;
-            
-            float freq = pzemL1.frequency();
-            if(!isnan(freq)) doc["frequency"] = freq;
-            
-            String payload;
-            serializeJson(doc, payload);
-            mqttClient.publish(pwrTopic.c_str(), payload.c_str());
-            
-            Serial.println("[PZEM] 3-Phase Data Published.");
-        }
-        
-        // Send heartbeat (telemetry) every 60s
-        if (millis() - lastHeartbeat > HEARTBEAT_INTERVAL_MS) {
-            lastHeartbeat = millis();
-            String telTopic = "nt/v1/" + savedDeviceId + "/stat/telemetry";
-            
-            StaticJsonDocument<256> doc;
-            doc["rssi"] = WiFi.RSSI();
-            doc["uptime_sec"] = millis() / 1000;
-            doc["free_heap"] = ESP.getFreeHeap();
-            doc["fw_version"] = "1.0.0-pzem3";
-            
-            String hbPayload;
-            serializeJson(doc, hbPayload);
-            mqttClient.publish(telTopic.c_str(), hbPayload.c_str());
-        }
+        return;
+    }
+
+    // Maintain MQTT
+    if (!mqttClient.connected()) {
+        Serial.println("[MQTT] Reconnecting...");
+        connectMQTT();
+    }
+    mqttClient.loop();
+
+    // Publish 3-phase telemetry
+    if (millis() - lastPowerUpdate > POWER_UPDATE_INTERVAL_MS) {
+        lastPowerUpdate = millis();
+        publishPowerData();
+    }
+
+    // Heartbeat
+    if (millis() - lastHeartbeat > HEARTBEAT_INTERVAL_MS) {
+        lastHeartbeat = millis();
+        publishHeartbeat();
     }
 }

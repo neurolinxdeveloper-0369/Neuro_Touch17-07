@@ -228,43 +228,64 @@ func onMessageReceived(client mqtt.Client, message mqtt.Message) {
 					}
 				}
 				
-				_, hasEnergyKwh := data["energy_kwh"]
+				_, hasEnergyKwh  := data["energy_kwh"]
 				_, hasTotalEnergy := data["total_energy"]
-				_, hasVoltage1 := data["voltage_1"]
+				_, hasVoltageR    := data["voltage_r"]
+				_, hasVoltage     := data["voltage"]    // 1-phase
 				
-				if hasEnergyKwh || hasTotalEnergy || hasVoltage1 {
+				if hasEnergyKwh || hasTotalEnergy || hasVoltageR || hasVoltage {
 					energy := models.EnergyReading{
-						DeviceID: deviceID,
+						DeviceID:   deviceID,
 						RecordedAt: time.Now(),
 					}
 					
-					// 1-Phase mappings (fallback)
-					if v, ok := data["voltage"]; ok { energy.Voltage1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["current"]; ok { energy.Current1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["power"]; ok { energy.Power1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["power_factor"]; ok { energy.Pf1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["energy_kwh"]; ok { energy.TotalEnergy, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					
-					// 3-Phase mappings
-					if v, ok := data["voltage_1"]; ok { energy.Voltage1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["current_1"]; ok { energy.Current1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["power_1"]; ok { energy.Power1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["pf_1"]; ok { energy.Pf1, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					
-					if v, ok := data["voltage_2"]; ok { energy.Voltage2, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["current_2"]; ok { energy.Current2, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["power_2"]; ok { energy.Power2, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["pf_2"]; ok { energy.Pf2, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					
-					if v, ok := data["voltage_3"]; ok { energy.Voltage3, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["current_3"]; ok { energy.Current3, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["power_3"]; ok { energy.Power3, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["pf_3"]; ok { energy.Pf3, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					
-					if v, ok := data["total_power"]; ok { energy.TotalPower, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					pf := func(key string) float64 {
+						if v, ok := data[key]; ok {
+							f, _ := strconv.ParseFloat(fmt.Sprintf("%v", v), 64)
+							return f
+						}
+						return 0
+					}
+
+					// ── 1-Phase mappings ─────────────────────────────────
+					energy.VoltageR, _ = strconv.ParseFloat(fmt.Sprintf("%v", data["voltage"]),      64)
+					energy.CurrentR, _ = strconv.ParseFloat(fmt.Sprintf("%v", data["current"]),      64)
+					energy.PowerR,   _ = strconv.ParseFloat(fmt.Sprintf("%v", data["power"]),        64) // kW
+					energy.EnergyR,  _ = strconv.ParseFloat(fmt.Sprintf("%v", data["energy_kwh"]),   64) // kWh
+					energy.Pf        = pf("power_factor")
+					energy.TotalEnergy, _ = strconv.ParseFloat(fmt.Sprintf("%v", data["energy_kwh"]), 64)
+
+					// ── 3-Phase mappings (R/Y/B) ──────────────────────────
+					if v, ok := data["voltage_r"]; ok { energy.VoltageR, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["current_r"]; ok { energy.CurrentR, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["power_r"];   ok { energy.PowerR,   _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["energy_r"];  ok { energy.EnergyR,  _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+
+					if v, ok := data["voltage_y"]; ok { energy.VoltageY, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["current_y"]; ok { energy.CurrentY, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["power_y"];   ok { energy.PowerY,   _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["energy_y"];  ok { energy.EnergyY,  _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+
+					if v, ok := data["voltage_b"]; ok { energy.VoltageB, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["current_b"]; ok { energy.CurrentB, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["power_b"];   ok { energy.PowerB,   _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["energy_b"];  ok { energy.EnergyB,  _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+
+					// Line-to-line voltages
+					if v, ok := data["v_ry"]; ok { energy.VRY, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["v_yb"]; ok { energy.VYB, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["v_br"]; ok { energy.VBR, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+
+					// Shared fields
+					if v, ok := data["pf"];          ok { energy.Pf,          _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+					if v, ok := data["total_power"];  ok { energy.TotalPower,  _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
 					if v, ok := data["total_energy"]; ok { energy.TotalEnergy, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					if v, ok := data["frequency"]; ok { energy.Frequency, _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
-					
+					if v, ok := data["frequency"];    ok { energy.Frequency,   _ = strconv.ParseFloat(fmt.Sprintf("%v", v), 64) }
+
+					// For 1-phase: total_power = power_r, total_energy = energy_r
+					if energy.TotalPower == 0  && energy.PowerR > 0  { energy.TotalPower  = energy.PowerR }
+					if energy.TotalEnergy == 0 && energy.EnergyR > 0 { energy.TotalEnergy = energy.EnergyR }
+
 					db.Create(&energy)
 				} else {
 					// ----------------------------------------------------

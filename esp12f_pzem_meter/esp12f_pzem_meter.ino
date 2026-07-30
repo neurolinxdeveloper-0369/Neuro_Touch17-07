@@ -291,31 +291,34 @@ void loop() {
         if (millis() - lastPowerUpdate > POWER_UPDATE_INTERVAL_MS) {
             lastPowerUpdate = millis();
             
-            float voltage = pzem.voltage();
-            float current = pzem.current();
-            float power = pzem.power();
-            float energy = pzem.energy();
+            float voltage   = pzem.voltage();
+            float current   = pzem.current();
+            float powerW    = pzem.power();      // Watts from PZEM
+            float energy    = pzem.energy();     // kWh (library returns kWh)
             float frequency = pzem.frequency();
-            float pf = pzem.pf();
+            float pf        = pzem.pf();
             
             if (isnan(voltage)) {
                 Serial.println("[PZEM] Error reading data. Check wiring!");
             } else {
-                Serial.printf("[PZEM] V: %.1f, I: %.3f, P: %.1f, E: %.3f, Hz: %.1f, PF: %.2f\n", 
-                              voltage, current, power, energy, frequency, pf);
+                float powerKW = powerW / 1000.0f;  // Convert W → kW
+                
+                Serial.printf("[PZEM] V: %.1f, I: %.4f A, P: %.4f kW, E: %.4f kWh, Hz: %.1f, PF: %.2f\n", 
+                              voltage, current, powerKW, energy, frequency, pf);
                               
                 String pwrTopic = "nt/v1/" + savedDeviceId + "/stat/telemetry";
                 StaticJsonDocument<256> doc;
-                doc["voltage"] = voltage;
-                doc["current"] = current;
-                doc["power"] = power;
-                doc["energy_kwh"] = energy;
-                doc["frequency"] = frequency;
-                doc["power_factor"] = pf;
+                doc["voltage"]      = serialized(String(voltage,   1));
+                doc["current"]      = serialized(String(current,   4));
+                doc["power"]        = serialized(String(powerKW,   4));  // kW
+                doc["energy_kwh"]   = serialized(String(energy,    4));  // kWh
+                doc["frequency"]    = serialized(String(frequency, 1));
+                doc["power_factor"] = serialized(String(pf,        2));
                 
                 String payload;
                 serializeJson(doc, payload);
                 mqttClient.publish(pwrTopic.c_str(), payload.c_str());
+                Serial.println("[MQTT] Published: " + payload);
             }
         }
         
