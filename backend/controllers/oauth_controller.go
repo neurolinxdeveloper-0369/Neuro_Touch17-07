@@ -50,7 +50,6 @@ func RenderAuthorizePage(c *fiber.Ctx) error {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Link Neuro Touch with Alexa</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #111844; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background-color: #1e265c; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 100%%; max-width: 400px; text-align: center; }
@@ -59,9 +58,15 @@ func RenderAuthorizePage(c *fiber.Ctx) error {
         button:hover { background-color: #45a049; }
         .hidden { display: none; }
         .error { color: #ff5252; font-size: 14px; margin-bottom: 10px; }
+        .loading { font-size: 18px; color: #4CAF50; }
     </style>
 </head>
 <body>
+    <div class="card hidden" id="loadingState">
+        <h2>Linking Account...</h2>
+        <p class="loading">Please wait while we verify your Google login.</p>
+    </div>
+
     <div class="card" id="step1">
         <h2>Neuro Touch Alexa Link</h2>
         <p>Enter your phone number to receive an OTP</p>
@@ -71,22 +76,10 @@ func RenderAuthorizePage(c *fiber.Ctx) error {
 
         <div style="margin: 20px 0; color: #aaa;">OR</div>
 
-        <div id="g_id_onload"
-             data-client_id="%s"
-             data-context="signin"
-             data-ux_mode="popup"
-             data-callback="handleGoogleLogin"
-             data-auto_prompt="false">
-        </div>
-        <div class="g_id_signin"
-             data-type="standard"
-             data-shape="rectangular"
-             data-theme="outline"
-             data-text="signin_with"
-             data-size="large"
-             data-logo_alignment="left"
-             style="display: flex; justify-content: center;">
-        </div>
+        <button onclick="loginWithGoogle()" style="background-color: #4285F4; display: flex; align-items: center; justify-content: center;">
+            <svg style="width:18px;height:18px;margin-right:10px;" viewBox="0 0 24 24"><path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Sign in with Google
+        </button>
     </div>
 
     <div class="card hidden" id="step2">
@@ -101,6 +94,56 @@ func RenderAuthorizePage(c *fiber.Ctx) error {
         const state = "%s";
         const redirectUri = "%s";
         const clientId = "%s";
+        const googleClientId = "%s";
+
+        window.onload = function() {
+            if (window.location.hash.includes("id_token=")) {
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const idToken = hashParams.get("id_token");
+                const customStateEncoded = hashParams.get("state");
+                
+                if (idToken && customStateEncoded) {
+                    try {
+                        const customState = JSON.parse(atob(customStateEncoded));
+                        document.getElementById('step1').classList.add('hidden');
+                        document.getElementById('loadingState').classList.remove('hidden');
+                        
+                        fetch('/api/v1/oauth/authorize', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                id_token: idToken, 
+                                state: customState.state, 
+                                redirect_uri: customState.redirect_uri, 
+                                client_id: customState.client_id
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if(data.success) {
+                                window.location.href = data.redirect_url;
+                            } else {
+                                document.getElementById('loadingState').classList.add('hidden');
+                                document.getElementById('step1').classList.remove('hidden');
+                                const err = document.getElementById('error1');
+                                err.innerText = data.error || "Google login failed on backend";
+                                err.classList.remove('hidden');
+                                window.history.pushState("", document.title, window.location.pathname + window.location.search);
+                            }
+                        });
+                    } catch(e) {
+                        console.error(e);
+                    }
+                }
+            }
+        };
+
+        function loginWithGoogle() {
+            const myRedirectUri = window.location.origin + window.location.pathname;
+            const customState = btoa(JSON.stringify({ state: state, redirect_uri: redirectUri, client_id: clientId }));
+            const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(myRedirectUri)}&response_type=id_token&scope=email%20profile&state=${customState}&nonce=12345`;
+            window.location.href = url;
+        }
 
         async function sendOTP() {
             const phone = document.getElementById('phone').value;
@@ -146,30 +189,10 @@ func RenderAuthorizePage(c *fiber.Ctx) error {
                 console.error(e);
             }
         }
-
-        async function handleGoogleLogin(response) {
-            try {
-                const res = await fetch('/api/v1/oauth/authorize', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({id_token: response.credential, state, redirect_uri: redirectUri, client_id: clientId})
-                });
-                const data = await res.json();
-                if(data.success) {
-                    window.location.href = data.redirect_url;
-                } else {
-                    const err = document.getElementById('error1');
-                    err.innerText = data.error || "Google login failed";
-                    err.classList.remove('hidden');
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
     </script>
 </body>
 </html>
-`, config.AppConfig.GoogleClientID, state, redirectURI, clientID)
+`, state, redirectURI, clientID, config.AppConfig.GoogleClientID)
 
 	c.Set("Content-Type", "text/html")
 	return c.SendString(html)
