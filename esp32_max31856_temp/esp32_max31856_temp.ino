@@ -2,14 +2,6 @@
  * ═══════════════════════════════════════════════════════════════
  * Neuro Temp Monitor — Complete ESP32 Firmware
  * ═══════════════════════════════════════════════════════════════
- *
- * This firmware handles:
- *  1. SoftAP provisioning if Wi-Fi credentials are not saved.
- *  2. EEPROM storage of Wi-Fi credentials and Device ID.
- *  3. Connection to Home Wi-Fi network.
- *  4. Registration to the Cloud Backend (MAC confirmation).
- *  5. Connection to the local MQTT broker using the provided Device ID.
- *  6. Reading MAX31856 Temp Sensor and 2x PZEM-004T v3.0 over MQTT.
  */
 
 #include <WiFi.h>
@@ -52,14 +44,9 @@
 #define TELEMETRY_INTERVAL_MS    5000
 
 // ─── Hardware Setup ──────────────────────────────────────────────────────────
-// Use hardware SPI for MAX31856 (ESP32 VSPI: CS=5, MOSI=23, MISO=19, SCK=18)
-Adafruit_MAX31856 maxthermo = Adafruit_MAX31856(5);
-
-// PZEM instances for Fans (HardwareSerial 1 and 2)
-// Fan 1 on Serial1 (RX=16, TX=17)
-PZEM004Tv30 pzemFan1(&Serial1, 16, 17);
-// Fan 2 on Serial2 (RX=14, TX=15)
-PZEM004Tv30 pzemFan2(&Serial2, 14, 15);
+Adafruit_MAX31856 maxthermo = Adafruit_MAX31856(5); // CS=5
+PZEM004Tv30 pzemFan1(&Serial1, 16, 17); // Fan 1
+PZEM004Tv30 pzemFan2(&Serial2, 14, 15); // Fan 2
 
 // ─── Globals ──────────────────────────────────────────────────────────────────
 WebServer    server(80);
@@ -97,14 +84,15 @@ void saveCredentials(const String& ssid, const String& pass, const String& devic
     EEPROM.write(VALID_FLAG, 1);
     EEPROM.commit();
 }
-void loadCredentials() {
+bool loadCredentials() {
     EEPROM.begin(EEPROM_SIZE);
     if (EEPROM.read(VALID_FLAG) == 1) {
         savedSSID = readString(SSID_ADDR, 64);
         savedPassword = readString(PASS_ADDR, 64);
         savedDeviceId = readString(DEVID_ADDR, 48);
-        isProvisioned = (savedSSID.length() > 0 && savedDeviceId.length() > 0);
+        return true;
     }
+    return false;
 }
 void clearCredentials() {
     EEPROM.begin(EEPROM_SIZE);
@@ -113,126 +101,107 @@ void clearCredentials() {
     isProvisioned = false;
 }
 
-// ─── Utility Functions ────────────────────────────────────────────────────────
-String getMacAddress() {
-    uint8_t mac[6];
-    WiFi.macAddress(mac);
-    char macStr[18];
-    sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    return String(macStr);
-}
-String getMacAddressClean() {
-    uint8_t mac[6];
-    WiFi.macAddress(mac);
-    char macStr[18];
-    sprintf(macStr, "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    return String(macStr);
-}
+// ─── MQTT Reconnect ───────────────────────────────────────────────────────────
+void reconnectMqtt() {
+    while (!mqttClient.connected()) {
+        Serial.print("[MQTT] Attempting connection...");
+        String clientId = "NT-TEMP-" + String(WiFi.macAddress());
+        String lwtTopic = "nt/v1/" + savedDeviceId + "/lwt";
 
-// ─── Web Server Handlers ──────────────────────────────────────────────────────
-void handleRoot() {
-    String mac = getMacAddress();
-    String html = R"rawliteral(
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Neuro Touch Setup</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: white; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
-    .card { background: #1e293b; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); width: 90%; max-width: 400px; text-align: center; }
-    h2 { color: #38bdf8; margin-top: 0; }
-    input[type="text"], input[type="password"] { width: 100%; padding: 12px; margin: 8px 0 20px 0; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: white; box-sizing: border-box; }
-    input[type="submit"] { width: 100%; padding: 12px; background: #38bdf8; color: #0f172a; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; }
-    input[type="submit"]:hover { background: #0ea5e9; }
-    .mac { font-family: monospace; color: #94a3b8; font-size: 12px; margin-bottom: 20px; display: block; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h2>Configure Device</h2>
-    <span class="mac">MAC: )rawliteral" + mac + R"rawliteral(</span>
-    <form action="/save" method="POST">
-      <div style="text-align: left;"><label>Wi-Fi SSID</label></div>
-      <input type="text" name="ssid" required placeholder="Network Name">
-      <div style="text-align: left;"><label>Wi-Fi Password</label></div>
-      <input type="password" name="password" placeholder="Leave blank if open">
-      <input type="submit" value="Connect & Register">
-    </form>
-  </div>
-</body>
-</html>
-)rawliteral";
-    server.send(200, "text/html", html);
-}
+        // Connect with Last Will and Testament for status
+        if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASS, lwtTopic.c_str(), 1, true, "{\"status\":\"offline\"}")) {
+            Serial.println("connected");
+            
+            // Publish online status immediately (Retained)
+            mqttClient.publish(lwtTopic.c_str(), "{\"status\":\"online\"}", true);
 
-void handleSave() {
-    if (server.hasArg("ssid")) {
-        String newSSID = server.arg("ssid");
-        String newPass = server.arg("password");
-        
-        server.send(200, "text/html", "<html><body style='background:#0f172a;color:white;text-align:center;font-family:sans-serif;padding-top:20vh;'><h2>Connecting...</h2><p>Please wait while the device registers with Neuro Touch.</p></body></html>");
-        
-        Serial.println("[PROVISION] Received credentials for: " + newSSID);
-        
-        // Temporarily connect to check internet & register MAC
-        WiFi.begin(newSSID.c_str(), newPass.c_str());
-        
-        unsigned long startAttempt = millis();
-        bool connected = false;
-        while (millis() - startAttempt < WIFI_CONNECT_TIMEOUT_MS) {
-            if (WiFi.status() == WL_CONNECTED) {
-                connected = true;
-                break;
-            }
-            delay(500);
-            Serial.print(".");
-        }
-        
-        if (connected) {
-            Serial.println("\n[PROVISION] Connected to Wi-Fi. Registering MAC...");
-            
-            HTTPClient http;
-            String url = String(BACKEND_HOST) + String(BACKEND_PROVISION_PATH);
-            http.begin(wifiClient, url);
-            http.addHeader("Content-Type", "application/json");
-            http.setTimeout(HTTP_TIMEOUT_MS);
-            
-            StaticJsonDocument<128> reqDoc;
-            reqDoc["mac_address"] = getMacAddressClean();
-            String reqBody;
-            serializeJson(reqDoc, reqBody);
-            
-            int httpCode = http.POST(reqBody);
-            Serial.printf("[PROVISION] HTTP POST code: %d\n", httpCode);
-            
-            if (httpCode == 200 || httpCode == 201) {
-                String payload = http.getString();
-                StaticJsonDocument<256> resDoc;
-                DeserializationError error = deserializeJson(resDoc, payload);
-                
-                if (!error && resDoc.containsKey("device_id")) {
-                    String devId = resDoc["device_id"].as<String>();
-                    Serial.println("[PROVISION] Success! Device ID: " + devId);
-                    
-                    saveCredentials(newSSID, newPass, devId);
-                    
-                    delay(1000);
-                    ESP.restart(); // Restart into normal mode
-                } else {
-                    Serial.println("[PROVISION] Error parsing backend response.");
-                }
-            } else {
-                Serial.println("[PROVISION] Backend rejected MAC or unreachable.");
-            }
-            http.end();
+            // Subscribe to all commands for this device
+            String cmdTopic = "nt/v1/" + savedDeviceId + "/cmd/#";
+            mqttClient.subscribe(cmdTopic.c_str());
         } else {
-            Serial.println("\n[PROVISION] Failed to connect to Wi-Fi with provided credentials.");
+            Serial.print("failed, rc=");
+            Serial.print(mqttClient.state());
+            Serial.println(" try again in 5 seconds");
+            delay(5000);
         }
-        
-        // If we reach here, something failed. Revert to AP mode by restarting.
-        ESP.restart();
     }
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+    String msg;
+    for (int i = 0; i < length; i++) {
+        msg += (char)payload[i];
+    }
+    Serial.print("[MQTT] Message arrived [");
+    Serial.print(topic);
+    Serial.print("] ");
+    Serial.println(msg);
+}
+
+// ─── AP Mode HTTP Handlers ────────────────────────────────────────────────────
+void handleRoot() {
+    StaticJsonDocument<256> doc;
+    doc["device"]       = "Temp_Monitor_1T";
+    doc["sensor"]       = "MAX31856_2xPZEM";
+    doc["mac_address"]  = WiFi.softAPmacAddress();
+    doc["firmware"]     = "1.0.0-temp";
+    doc["status"]       = "awaiting_config";
+    String body; serializeJson(doc, body);
+    server.send(200, "application/json", body);
+}
+
+void handleConfig() {
+    if (!server.hasArg("plain")) {
+        server.send(400, "application/json", "{\"error\":\"No body\"}");
+        return;
+    }
+    StaticJsonDocument<256> doc;
+    deserializeJson(doc, server.arg("plain"));
+    const char* ssid     = doc["ssid"]      | "";
+    const char* password = doc["password"]  | "";
+    const char* deviceId = doc["device_id"] | "";
+    
+    server.send(200, "application/json", "{\"success\":true}");
+    delay(100); server.handleClient(); // Flush response
+    
+    saveCredentials(String(ssid), String(password), String(deviceId));
+    ESP.restart(); // Reboot to connect to Wi-Fi
+}
+
+void handleReset() {
+    server.send(200, "application/json", "{\"success\":true}");
+    delay(500); clearCredentials(); ESP.restart();
+}
+
+// ─── Wi-Fi Station Connection ─────────────────────────────────────────────────
+void connectToWiFi(const String& ssid, const String& password) {
+    Serial.println("[WiFi] Connecting to: " + ssid);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid.c_str(), password.c_str());
+    
+    unsigned long startMs = millis();
+    while (WiFi.status() != WL_CONNECTED) {
+        if (millis() - startMs > WIFI_CONNECT_TIMEOUT_MS) {
+            Serial.println("[WiFi] Connection TIMEOUT. Clearing credentials and rebooting to AP.");
+            clearCredentials();
+            ESP.restart();
+        }
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("\n[WiFi] Connected! IP: " + WiFi.localIP().toString());
+    isProvisioned = true;
+    
+    // Report MAC address to backend
+    String url = String(BACKEND_HOST) + String(BACKEND_PROVISION_PATH) + "?mac=" + WiFi.macAddress() + "&device_id=" + savedDeviceId;
+    HTTPClient http;
+    http.begin(url);
+    http.setTimeout(HTTP_TIMEOUT_MS);
+    int httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK) {
+        Serial.println("[PROVISION] Backend MAC confirm successful!");
+    }
+    http.end();
 }
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
@@ -243,60 +212,43 @@ void setup() {
     Serial.println("   Neuro Temp Monitor (MAX31856 + 2x PZEM)       ");
     Serial.println("═════════════════════════════════════════════════");
 
-    // Initialize EEPROM & Load Config
-    loadCredentials();
-    
-    // Check if user is forcing a reset (hold BOOT button or touch pin logic can go here)
-    // For now, if not provisioned, enter AP mode.
+    mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+    mqttClient.setCallback(mqttCallback);
 
-    if (!isProvisioned) {
-        Serial.println("[SYS] No credentials. Starting SoftAP Provisioning Mode.");
-        WiFi.mode(WIFI_AP);
+    if (loadCredentials() && savedSSID.length() > 0) {
+        connectToWiFi(savedSSID, savedPassword);
         
-        IPAddress ip(AP_IP_ADDR);
-        IPAddress gateway(AP_GATEWAY);
-        IPAddress subnet(AP_SUBNET);
-        WiFi.softAPConfig(ip, gateway, subnet);
-        WiFi.softAP(AP_SSID, AP_PASSWORD, AP_CHANNEL);
-        
-        Serial.print("[SYS] AP IP Address: ");
-        Serial.println(WiFi.softAPIP());
-        
-        server.on("/", HTTP_GET, handleRoot);
-        server.on("/save", HTTP_POST, handleSave);
-        server.begin();
-        Serial.println("[SYS] HTTP Server started for Captive Portal.");
-    } else {
-        Serial.println("[SYS] Booting in Station Mode.");
-        Serial.println("[SYS] SSID: " + savedSSID);
-        Serial.println("[SYS] Device ID: " + savedDeviceId);
-        
-        WiFi.mode(WIFI_STA);
-        WiFi.begin(savedSSID.c_str(), savedPassword.c_str());
-
-        mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
-        
-        // Initialize Sensors
+        // Initialize Sensors only if we are in STA mode connecting
         if (!maxthermo.begin()) {
-            Serial.println("[ERROR] Could not initialize MAX31856. Check wiring!");
+            Serial.println("[ERROR] Could not initialize MAX31856.");
         } else {
             maxthermo.setThermocoupleType(MAX31856_TCTYPE_K);
-            Serial.println("[SENSOR] MAX31856 initialized. Type K Thermocouple set.");
+            Serial.println("[SENSOR] MAX31856 initialized.");
         }
+    } else {
+        Serial.println("[Boot] No credentials — starting AP mode");
+        WiFi.mode(WIFI_AP);
+        IPAddress apIP(AP_IP_ADDR); IPAddress gateway(AP_GATEWAY); IPAddress subnet(AP_SUBNET);
+        WiFi.softAPConfig(apIP, gateway, subnet);
+        WiFi.softAP(AP_SSID, AP_PASSWORD, AP_CHANNEL);
+        
+        server.on("/", HTTP_GET, handleRoot);
+        server.on("/config", HTTP_POST, handleConfig);
+        server.on("/reset", HTTP_POST, handleReset);
+        server.begin();
     }
 }
 
 // ─── Main Loop ────────────────────────────────────────────────────────────────
 void loop() {
     if (!isProvisioned) {
-        // Handle AP portal requests
         server.handleClient();
         return;
     }
 
-    // Normal Station Mode Operations
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.print("[WiFi] Reconnecting");
+        Serial.print("[WiFi] Reconnecting...");
+        WiFi.begin(savedSSID.c_str(), savedPassword.c_str());
         while (WiFi.status() != WL_CONNECTED) {
             delay(500);
             Serial.print(".");
@@ -305,19 +257,7 @@ void loop() {
     }
 
     if (!mqttClient.connected()) {
-        Serial.print("[MQTT] Attempting connection...");
-        String clientId = savedDeviceId + "-" + String(random(0xffff), HEX);
-        if (mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
-            Serial.println(" Connected!");
-            String statusTopic = "nt/v1/" + savedDeviceId + "/stat/status";
-            mqttClient.publish(statusTopic.c_str(), "online", true);
-        } else {
-            Serial.print(" Failed, rc=");
-            Serial.print(mqttClient.state());
-            Serial.println(" Try again in 5s");
-            delay(5000);
-            return;
-        }
+        reconnectMqtt();
     }
     mqttClient.loop();
 
@@ -339,9 +279,6 @@ void loop() {
 
         if (isnan(currentFan1)) currentFan1 = 0.0;
         if (isnan(currentFan2)) currentFan2 = 0.0;
-
-        Serial.printf("[SENSOR] Temp: %.2fC | CJ: %.2fC\n", thermocouple, coldJunction);
-        Serial.printf("[FAN] Fan1: %.2fA | Fan2: %.2fA\n", currentFan1, currentFan2);
 
         StaticJsonDocument<256> doc;
         doc["temperature"] = serialized(String(thermocouple, 2));
